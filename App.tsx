@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import type { AppData, Recipe, User, UserMealPlans } from './types';
 import { generateRecipe } from './services/geminiService';
@@ -788,18 +787,31 @@ export default function App() {
             const savedData = localStorage.getItem('matplanerareData');
             if (savedData) {
                 let parsedData = JSON.parse(savedData);
-                // --- Data migration from string[] to object with password hash ---
-                if (parsedData.users && Array.isArray(parsedData.users)) {
-                    console.log("Migrating old user data structure...");
-                    const newUsersObject: Record<string, User> = {};
-                    parsedData.users.forEach((username: string) => {
-                        newUsersObject[username] = { passwordHash: '' }; // Set empty hash to force password creation
-                    });
-                    parsedData.users = newUsersObject;
-                    displayToast('Användarsystemet har uppdaterats. Vänligen välj ett lösenord.', 'success');
+                
+                // Extra validation to ensure parsedData is a non-null object
+                if (parsedData && typeof parsedData === 'object' && !Array.isArray(parsedData)) {
+                    // --- Data migration from string[] to object with password hash ---
+                    if (parsedData.users && Array.isArray(parsedData.users)) {
+                        console.log("Migrating old user data structure...");
+                        const newUsersObject: Record<string, User> = {};
+                        parsedData.users.forEach((username: string) => {
+                            newUsersObject[username] = { passwordHash: '' }; // Set empty hash to force password creation
+                        });
+                        parsedData.users = newUsersObject;
+                        displayToast('Användarsystemet har uppdaterats. Vänligen välj ett lösenord.', 'success');
+                    }
+                    
+                    // Ensure all top-level keys exist to prevent crashes from malformed data
+                    const validatedData = {
+                        ...initialAppData,
+                        ...parsedData,
+                    };
+                    
+                    setAppData(validatedData as AppData);
+                } else {
+                    // If data is not a valid object, ignore it and start fresh.
+                    setAppData(initialAppData);
                 }
-                // --- End Migration ---
-                setAppData(parsedData as AppData);
             }
         } catch (error) {
             console.error("Failed to load data from localStorage", error);
