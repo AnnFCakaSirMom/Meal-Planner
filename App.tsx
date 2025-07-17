@@ -546,20 +546,18 @@ const ViewRecipeModal: React.FC<ViewRecipeModalProps> = ({ isOpen, onClose, reci
     const [portions, setPortions] = useState(4);
     const [copyButtonText, setCopyButtonText] = useState('Kopiera');
 
-    // This effect synchronizes the modal's internal state with the recipe prop when it becomes visible.
     useEffect(() => {
         if (isOpen && recipe) {
             setPortions(recipe.originalPortions || 4);
-            setCopyButtonText('Kopiera'); // Reset button text on open
+            setCopyButtonText('Kopiera');
         }
     }, [isOpen, recipe]);
     
-    // Guard clause to prevent rendering with a null recipe, which would cause a crash.
-    if (!recipe) {
+    if (!isOpen || !recipe) {
         return null;
     }
 
-    const calculatedIngredients = useMemo(() => {
+    const calculatedIngredients = (() => {
         if (!recipe.ingredients) return [];
         const newPortions = portions;
         const originalPortions = recipe.originalPortions || 1;
@@ -576,7 +574,7 @@ const ViewRecipeModal: React.FC<ViewRecipeModalProps> = ({ isOpen, onClose, reci
             }
             return line;
         });
-    }, [recipe, portions]);
+    })();
     
     const handleCopy = () => {
         const ingredientsText = calculatedIngredients.map(ing => `- ${ing}`).join('\n');
@@ -749,6 +747,64 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, onSave, 
     );
 };
 
+interface RecipeListPanelProps {
+    recipes: Record<string, Recipe>;
+    currentUser: string;
+    adminUser: string | null;
+    onAdd: () => void;
+    onEdit: (recipe: Recipe) => void;
+    onDelete: (recipe: Recipe) => void;
+}
+const RecipeListPanel: React.FC<RecipeListPanelProps> = ({ recipes, currentUser, adminUser, onAdd, onEdit, onDelete }) => {
+    const [searchTerm, setSearchTerm] = useState('');
+    
+    const filteredRecipes = useMemo(() => {
+        const searchIngredients = searchTerm.toLowerCase().split(',').map(s => s.trim()).filter(Boolean);
+        return Object.values(recipes)
+            .filter((recipe: Recipe) => {
+                if (searchIngredients.length === 0) return true;
+                const recipeIngredients = (recipe.ingredients || '').toLowerCase();
+                return searchIngredients.every(si => recipeIngredients.includes(si));
+            })
+            .sort((a: Recipe, b: Recipe) => a.name.localeCompare(b.name, 'sv'));
+    }, [recipes, searchTerm]);
+
+    return (
+        <div className="panel p-6">
+            <div className="flex justify-between items-center mb-6">
+                <h2 className="text-2xl font-bold text-slate-800">Receptbank</h2>
+                <Button 
+                    onClick={onAdd}
+                    className="p-2 rounded-full"
+                    title="Lägg till nytt recept"
+                >
+                    <PlusIcon />
+                </Button>
+            </div>
+            <div className="mb-4">
+                <label htmlFor="ingredient-search-input" className="sr-only">Sök på ingredienser</label>
+                <input type="search" id="ingredient-search-input" placeholder="Sök ingrediens (t.ex. kyckling, tomat)..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-sky-500 focus:border-sky-500 bg-white/80" />
+            </div>
+            <div className="space-y-3 h-[55vh] overflow-y-auto pr-2">
+                {filteredRecipes.length > 0 ? filteredRecipes.map((recipe: Recipe) => {
+                    const canEdit = recipe.createdBy === currentUser || currentUser === adminUser;
+                    return (
+                        <div key={recipe.id} className="bg-white/60 p-4 rounded-lg shadow-sm flex justify-between items-center border border-slate-200/50">
+                            <div>
+                                <p className="font-semibold text-slate-800">{recipe.name}</p>
+                                <p className="text-xs text-slate-400">Skapad av: {recipe.createdBy || 'Okänd'}</p>
+                            </div>
+                            <div className="flex space-x-2">
+                                <button onClick={() => onEdit(recipe)} disabled={!canEdit} title={!canEdit ? 'Du kan bara redigera dina egna recept' : 'Redigera recept'} className={`p-1 ${canEdit ? 'text-slate-500 hover:text-sky-600' : 'text-slate-400 cursor-not-allowed'}`}><EditIcon /></button>
+                                <button onClick={() => onDelete(recipe)} disabled={!canEdit} title={!canEdit ? 'Du kan bara ta bort dina egna recept' : 'Ta bort recept'} className={`p-1 ${canEdit ? 'text-slate-500 hover:text-red-600' : 'text-slate-400 cursor-not-allowed'}`}><DeleteIcon /></button>
+                            </div>
+                        </div>
+                    );
+                }) : <p className="text-slate-500 text-center mt-8">{searchTerm ? 'Inga recept matchade din sökning.' : 'Inga recept hittades i receptbanken.'}</p>}
+            </div>
+        </div>
+    );
+};
 
 // --- MAIN APP ---
 export default function App() {
@@ -1015,7 +1071,6 @@ export default function App() {
 
     const handleCloseViewRecipe = useCallback(() => {
         setModals(p => ({ ...p, viewRecipe: false }));
-        // Clean up the recipe data for the modal to prevent stale state
         setRecipeToView(null);
     }, []);
     
@@ -1379,63 +1434,3 @@ export default function App() {
         </div>
     );
 }
-
-// Sub-component for recipe list to keep App component cleaner
-interface RecipeListPanelProps {
-    recipes: Record<string, Recipe>;
-    currentUser: string;
-    adminUser: string | null;
-    onAdd: () => void;
-    onEdit: (recipe: Recipe) => void;
-    onDelete: (recipe: Recipe) => void;
-}
-const RecipeListPanel: React.FC<RecipeListPanelProps> = ({ recipes, currentUser, adminUser, onAdd, onEdit, onDelete }) => {
-    const [searchTerm, setSearchTerm] = useState('');
-    
-    const filteredRecipes = useMemo(() => {
-        const searchIngredients = searchTerm.toLowerCase().split(',').map(s => s.trim()).filter(Boolean);
-        return Object.values(recipes)
-            .filter((recipe: Recipe) => {
-                if (searchIngredients.length === 0) return true;
-                const recipeIngredients = (recipe.ingredients || '').toLowerCase();
-                return searchIngredients.every(si => recipeIngredients.includes(si));
-            })
-            .sort((a: Recipe, b: Recipe) => a.name.localeCompare(b.name, 'sv'));
-    }, [recipes, searchTerm]);
-
-    return (
-        <div className="panel p-6">
-            <div className="flex justify-between items-center mb-6">
-                <h2 className="text-2xl font-bold text-slate-800">Receptbank</h2>
-                <Button 
-                    onClick={onAdd}
-                    className="p-2 rounded-full"
-                    title="Lägg till nytt recept"
-                >
-                    <PlusIcon />
-                </Button>
-            </div>
-            <div className="mb-4">
-                <label htmlFor="ingredient-search-input" className="sr-only">Sök på ingredienser</label>
-                <input type="search" id="ingredient-search-input" placeholder="Sök ingrediens (t.ex. kyckling, tomat)..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-sky-500 focus:border-sky-500 bg-white/80" />
-            </div>
-            <div className="space-y-3 h-[55vh] overflow-y-auto pr-2">
-                {filteredRecipes.length > 0 ? filteredRecipes.map((recipe: Recipe) => {
-                    const canEdit = recipe.createdBy === currentUser || currentUser === adminUser;
-                    return (
-                        <div key={recipe.id} className="bg-white/60 p-4 rounded-lg shadow-sm flex justify-between items-center border border-slate-200/50">
-                            <div>
-                                <p className="font-semibold text-slate-800">{recipe.name}</p>
-                                <p className="text-xs text-slate-400">Skapad av: {recipe.createdBy || 'Okänd'}</p>
-                            </div>
-                            <div className="flex space-x-2">
-                                <button onClick={() => onEdit(recipe)} disabled={!canEdit} title={!canEdit ? 'Du kan bara redigera dina egna recept' : 'Redigera recept'} className={`p-1 ${canEdit ? 'text-slate-500 hover:text-sky-600' : 'text-slate-400 cursor-not-allowed'}`}><EditIcon /></button>
-                                <button onClick={() => onDelete(recipe)} disabled={!canEdit} title={!canEdit ? 'Du kan bara ta bort dina egna recept' : 'Ta bort recept'} className={`p-1 ${canEdit ? 'text-slate-500 hover:text-red-600' : 'text-slate-400 cursor-not-allowed'}`}><DeleteIcon /></button>
-                            </div>
-                        </div>
-                    );
-                }) : <p className="text-slate-500 text-center mt-8">{searchTerm ? 'Inga recept matchade din sökning.' : 'Inga recept hittades i receptbanken.'}</p>}
-            </div>
-        </div>
-    );
-};
