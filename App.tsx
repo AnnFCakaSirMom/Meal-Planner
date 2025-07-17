@@ -539,23 +539,28 @@ const RecipeFormModal: React.FC<RecipeFormModalProps> = ({ isOpen, onClose, onSa
 interface ViewRecipeModalProps {
     isOpen: boolean;
     onClose: () => void;
-    recipe?: Recipe | null;
+    recipe: Recipe | null;
     showToast: (message: string, type?: 'success' | 'error') => void;
 }
 const ViewRecipeModal: React.FC<ViewRecipeModalProps> = ({ isOpen, onClose, recipe, showToast }) => {
-    const [portions, setPortions] = useState(recipe?.originalPortions || 4);
+    const [portions, setPortions] = useState(4);
     const [copyButtonText, setCopyButtonText] = useState('Kopiera');
 
+    // This effect synchronizes the modal's internal state with the recipe prop when it becomes visible.
     useEffect(() => {
-        if (recipe) {
+        if (isOpen && recipe) {
             setPortions(recipe.originalPortions || 4);
+            setCopyButtonText('Kopiera'); // Reset button text on open
         }
-    }, [recipe]);
+    }, [isOpen, recipe]);
     
-    if (!recipe) return null;
+    // Guard clause to prevent rendering with a null recipe, which would cause a crash.
+    if (!recipe) {
+        return null;
+    }
 
     const calculatedIngredients = useMemo(() => {
-        if (!recipe || !recipe.ingredients) return [];
+        if (!recipe.ingredients) return [];
         const newPortions = portions;
         const originalPortions = recipe.originalPortions || 1;
         const lines = recipe.ingredients.split('\n').filter(line => line.trim() !== '');
@@ -574,8 +579,6 @@ const ViewRecipeModal: React.FC<ViewRecipeModalProps> = ({ isOpen, onClose, reci
     }, [recipe, portions]);
     
     const handleCopy = () => {
-        if (!recipe) return;
-
         const ingredientsText = calculatedIngredients.map(ing => `- ${ing}`).join('\n');
         const instructionsText = (recipe.instructions || '').split('\n').filter(Boolean).map((step, i) => `${i+1}. ${step}`).join('\n');
         const fullText = `RECEPT: ${recipe.name}\n\nPORTIONER: ${portions}\n\nINGREDIENSER:\n${ingredientsText}\n\nINSTRUKTIONER:\n${instructionsText}`;
@@ -605,7 +608,7 @@ const ViewRecipeModal: React.FC<ViewRecipeModalProps> = ({ isOpen, onClose, reci
                             <h4 className="text-xl font-semibold mb-2 text-slate-800">Ingredienser</h4>
                             <div className="flex items-center space-x-2 mb-3">
                                 <label htmlFor="view-portions-input" className="text-sm font-medium text-slate-600">Portioner:</label>
-                                <input type="number" id="view-portions-input" min="1" value={portions} onChange={e => setPortions(parseInt(e.target.value, 10))} className="w-16 p-1 border rounded-md text-center border-slate-300 focus:ring-sky-500 focus:border-sky-500" />
+                                <input type="number" id="view-portions-input" min="1" value={portions} onChange={e => setPortions(parseInt(e.target.value, 10) || 1)} className="w-16 p-1 border rounded-md text-center border-slate-300 focus:ring-sky-500 focus:border-sky-500" />
                             </div>
                             <ul className="list-disc list-inside text-slate-700 space-y-1">
                                 {calculatedIngredients.map((ing, i) => <li key={i}>{ing}</li>)}
@@ -1004,6 +1007,17 @@ export default function App() {
         setRecipeToEdit(recipe);
         setModals(p => ({ ...p, recipeForm: true }));
     }, []);
+
+    const handleViewRecipe = useCallback((recipe: Recipe) => {
+        setRecipeToView(recipe);
+        setModals(p => ({ ...p, viewRecipe: true}));
+    }, []);
+
+    const handleCloseViewRecipe = useCallback(() => {
+        setModals(p => ({ ...p, viewRecipe: false }));
+        // Clean up the recipe data for the modal to prevent stale state
+        setRecipeToView(null);
+    }, []);
     
     const handleDeleteRecipe = useCallback((recipe: Recipe) => {
         setConfirmAction({
@@ -1291,7 +1305,7 @@ export default function App() {
         <div className="container mx-auto p-4 md:p-8 max-w-7xl">
             {toastInfo && <Toast message={toastInfo.message} type={toastInfo.type} show={showToast} />}
             <RecipeFormModal isOpen={modals.recipeForm} onClose={() => setModals(p => ({ ...p, recipeForm: false }))} onSave={handleSaveRecipe} recipeToEdit={recipeToEdit} showToast={displayToast} />
-            <ViewRecipeModal isOpen={modals.viewRecipe} onClose={() => setModals(p => ({ ...p, viewRecipe: false }))} recipe={recipeToView} showToast={displayToast}/>
+            <ViewRecipeModal isOpen={modals.viewRecipe} onClose={handleCloseViewRecipe} recipe={recipeToView} showToast={displayToast}/>
             <SelectRecipeModal isOpen={modals.selectRecipe} onClose={() => setModals(p => ({ ...p, selectRecipe: false }))} recipes={appData.recipes} onSelect={(recipeId) => { handleUpdateMealPlan(targetSlot!.day, recipeId); setModals(p => ({...p, selectRecipe: false})); }} dayName={targetSlot?.dayName || ''} />
             <SettingsModal isOpen={modals.settings} onClose={() => setModals(p => ({ ...p, settings: false }))} onSave={handleSaveToFile} onLoad={handleLoadFromFile} onImportRecipes={handleImportRecipesFromFile} />
             <ConfirmModal isOpen={modals.confirm} onClose={() => setModals(p => ({ ...p, confirm: false }))} onConfirm={() => { if(confirmAction) { confirmAction.action(); setConfirmAction(null); } setModals(p=>({...p, confirm: false})); }} title={confirmAction?.title || ""} text={confirmAction?.text || ""} isDanger={confirmAction?.isDanger} confirmText={confirmAction?.confirmText} />
@@ -1345,7 +1359,7 @@ export default function App() {
                                             <>
                                                 <p className="font-semibold text-sm flex-grow break-words text-slate-800">{recipe.name}</p>
                                                 <div className="text-right mt-1">
-                                                    <button onClick={(e) => { e.stopPropagation(); setRecipeToView(recipe); setModals(p => ({ ...p, viewRecipe: true})); }} className="view-meal-btn text-sky-600 hover:text-sky-800 text-xs font-semibold">Visa</button>
+                                                    <button onClick={(e) => { e.stopPropagation(); handleViewRecipe(recipe); }} className="view-meal-btn text-sky-600 hover:text-sky-800 text-xs font-semibold">Visa</button>
                                                     <button onClick={(e) => { e.stopPropagation(); handleUpdateMealPlan(dayKey, null); }} className="remove-meal-btn text-red-500 hover:text-red-700 text-xs font-semibold ml-2">Ta bort</button>
                                                 </div>
                                             </>
