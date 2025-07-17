@@ -1393,7 +1393,13 @@ const RecipeListPanel: React.FC<RecipeListPanelProps> = ({ recipes, currentUser,
         <div className="panel p-6">
             <div className="flex justify-between items-center mb-6">
                 <h2 className="text-2xl font-bold text-slate-800">Receptbank</h2>
-                <Button onClick={onAdd}><PlusIcon /> <span>Nytt</span></Button>
+                <Button 
+                    onClick={onAdd}
+                    className="p-2 rounded-full"
+                    title="Lägg till nytt recept"
+                >
+                    <PlusIcon />
+                </Button>
             </div>
             <div className="mb-4">
                 <label htmlFor="ingredient-search-input" className="sr-only">Sök på ingredienser</label>
