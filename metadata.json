@@ -1,5 +1,5 @@
 {
-  "name": "AI Meal Planner",
-  "description": "An intelligent meal planner to generate recipes and organize your week, powered by Gemini.",
+  "name": "Matplanerare",
+  "description": "En intelligent matplanerare för att generera recept och organisera din vecka, med hjälp av Gemini.",
   "requestFramePermissions": []
 }

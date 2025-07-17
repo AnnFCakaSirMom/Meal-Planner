@@ -15,16 +15,16 @@ const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
 const recipeSchema = {
     type: Type.OBJECT,
     properties: {
-        recipeName: { type: Type.STRING, description: "The name of the recipe." },
-        portions: { type: Type.INTEGER, description: "The number of portions the recipe serves, as an integer." },
+        recipeName: { type: Type.STRING, description: "Receptets namn på svenska." },
+        portions: { type: Type.INTEGER, description: "Antal portioner receptet är för, som ett heltal." },
         ingredients: {
             type: Type.ARRAY,
-            description: "An array of strings, where each string is one ingredient with its quantity (e.g., '1 cup flour', '2 large eggs').",
+            description: "En lista med strängar, där varje sträng är en ingrediens med dess mängd (t.ex. '2 dl mjöl', '3 stora ägg').",
             items: { type: Type.STRING },
         },
         instructions: {
             type: Type.ARRAY,
-            description: "An array of strings, where each string is a single step in the cooking instructions.",
+            description: "En lista med strängar, där varje sträng är ett enskilt steg i tillagningsinstruktionerna.",
             items: { type: Type.STRING },
         },
     },
@@ -45,7 +45,7 @@ export default async function handler(request: Request) {
         
         const response = await ai.models.generateContent({
             model: "gemini-2.5-flash",
-            contents: `Generate a recipe based on this idea: "${prompt}". Provide a standard recipe name, the number of portions it serves, a list of ingredients, and the step-by-step instructions.`,
+            contents: `Generera ett recept på svenska baserat på denna idé: "${prompt}". Ange ett standardreceptnamn, antal portioner, en lista med ingredienser och steg-för-steg-instruktioner.`,
             config: {
                 responseMimeType: "application/json",
                 responseSchema: recipeSchema,
