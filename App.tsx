@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import type { AppData, Recipe, User, UserMealPlans } from './types';
 import { generateRecipe } from './services/geminiService';
@@ -1309,9 +1310,9 @@ export default function App() {
                 </div>
             </header>
 
-            <main className="grid grid-cols-1 lg:grid-cols-5 gap-8">
+            <main className="grid grid-cols-1 lg:grid-cols-4 gap-8">
                 {/* Weekly Planner */}
-                <div className="panel p-6 lg:col-span-4">
+                <div className="panel p-6 lg:col-span-3">
                     <div className="flex justify-between items-center mb-6">
                         <h2 className="text-2xl font-bold text-slate-800">Veckoplan</h2>
                         <div className="flex items-center space-x-2">
