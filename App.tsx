@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import type { AppData, Recipe, User, UserMealPlans } from './types';
 import { generateRecipe } from './services/geminiService';
@@ -129,11 +128,11 @@ const Toast: React.FC<ToastProps> = ({ message, type, show }) => {
     );
 };
 
-const LoadingScreen: React.FC = () => (
+const LoadingScreen: React.FC<{message?: string}> = ({ message = "Laddar data..." }) => (
     <div className="flex items-center justify-center h-screen">
         <div className="flex flex-col items-center">
             <svg className="animate-spin h-10 w-10 text-sky-600 mb-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
-            <p className="text-slate-600 text-lg">Laddar data...</p>
+            <p className="text-slate-600 text-lg">{message}</p>
         </div>
     </div>
 );
@@ -841,57 +840,64 @@ export default function App() {
     const [userToTransferFrom, setUserToTransferFrom] = useState<string | null>(null);
     const [userToResetPassword, setUserToResetPassword] = useState<string | null>(null);
     
-    // --- Data Persistence & Migration ---
+    // --- Data Persistence ---
+    // NY KOD: Ladda data från servern när appen startar
     useEffect(() => {
-        try {
-            const savedData = localStorage.getItem('matplanerareData');
-            if (savedData) {
-                let parsedData = JSON.parse(savedData);
-                
-                // Extra validation to ensure parsedData is a non-null object
-                if (parsedData && typeof parsedData === 'object' && !Array.isArray(parsedData)) {
-                    // --- Data migration from string[] to object with password hash ---
-                    if (parsedData.users && Array.isArray(parsedData.users)) {
-                        console.log("Migrating old user data structure...");
-                        const newUsersObject: Record<string, User> = {};
-                        parsedData.users.forEach((username: string) => {
-                            newUsersObject[username] = { passwordHash: '' }; // Set empty hash to force password creation
-                        });
-                        parsedData.users = newUsersObject;
-                        displayToast('Användarsystemet har uppdaterats. Vänligen välj ett lösenord.', 'success');
-                    }
-                    
-                    // Ensure all top-level keys exist to prevent crashes from malformed data
-                    const validatedData = {
-                        ...initialAppData,
-                        ...parsedData,
-                    };
-                    
+        const loadDataFromServer = async () => {
+            try {
+                const response = await fetch('/api/get-app-data');
+                if (!response.ok) {
+                    throw new Error('Network response was not ok');
+                }
+                const data = await response.json();
+                 // Extra validering för att säkerställa att datan är korrekt
+                if (data && typeof data === 'object' && !Array.isArray(data)) {
+                    const validatedData = { ...initialAppData, ...data };
                     setAppData(validatedData as AppData);
                 } else {
-                    // If data is not a valid object, ignore it and start fresh.
-                    setAppData(initialAppData);
+                    setAppData(initialAppData); // Fallback till tom data
                 }
-            }
-        } catch (error) {
-            console.error("Failed to load data from localStorage", error);
-            setAppData(initialAppData);
-        } finally {
-            setIsLoading(false);
-            isInitialized.current = true;
-        }
-    }, []);
-
-    useEffect(() => {
-        if(isInitialized.current) {
-            try {
-                localStorage.setItem('matplanerareData', JSON.stringify(appData));
             } catch (error) {
-                console.error("Failed to save data to localStorage", error);
-                displayToast('Kunde inte spara ändringar.', 'error');
+                console.error("Failed to load data from server", error);
+                displayToast('Kunde inte ladda data från servern.', 'error');
+                setAppData(initialAppData); // Fallback till tom data vid fel
+            } finally {
+                setIsLoading(false);
+                isInitialized.current = true;
             }
-        }
-    }, [appData]);
+        };
+
+        loadDataFromServer();
+    }, []); // Den tomma arrayen [] gör att denna useEffect bara körs en gång när appen monteras.
+
+    // NY KOD: Spara data till servern varje gång appData ändras
+    useEffect(() => {
+        const saveDataToServer = async () => {
+            // Kör inte på den allra första renderingen innan datan har laddats.
+            if (!isInitialized.current) {
+                return;
+            }
+             // Kör inte om datan är i sitt initiala, tomma tillstånd.
+            if (appData === initialAppData) {
+                return;
+            }
+
+            try {
+                await fetch('/api/save-app-data', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(appData),
+                });
+            } catch (error) {
+                console.error("Failed to save data to server", error);
+                displayToast('Kunde inte spara ändringar till servern.', 'error');
+            }
+        };
+
+        saveDataToServer();
+    }, [appData]); // Denna useEffect körs varje gång 'appData'-state ändras.
     
     const displayToast = useCallback((message: string, type: 'success' | 'error' = 'success') => {
         setToastInfo({ message, type, key: Date.now() });
@@ -978,13 +984,20 @@ export default function App() {
                         delete newUsers[userToDelete];
                         const newMealPlans = { ...prev.mealPlans };
                         delete newMealPlans[userToDelete];
-                        return { ...prev, users: newUsers, mealPlans: newMealPlans };
+                        // Behåll recepten men sätt skaparen till admin eller null
+                        const newRecipes = { ...prev.recipes };
+                         Object.values(newRecipes).forEach((recipe: Recipe) => {
+                            if(recipe.createdBy === userToDelete) {
+                                newRecipes[recipe.id] = { ...recipe, createdBy: prev.adminUser || 'Borttagen användare' };
+                            }
+                        });
+                        return { ...prev, users: newUsers, mealPlans: newMealPlans, recipes: newRecipes };
                     });
                     displayToast(`Användare ${userToDelete} borttagen.`, 'success');
                     resolve(true);
                 },
                 title: "Ta bort användare",
-                text: `Är du säker på att du vill ta bort "${userToDelete}"? All deras data raderas permanent.`,
+                text: `Är du säker på att du vill ta bort "${userToDelete}"? Deras matplaner raderas, men recepten blir kvar och ägs av admin.`,
                 isDanger: true
             });
             setModals(prev => ({ ...prev, confirm: true }));
@@ -1149,6 +1162,7 @@ export default function App() {
         setUserToTransferFrom(null);
     }, [userToTransferFrom, appData.recipes, displayToast]);
     
+    // Behåller backup-funktionerna som en extra säkerhet
     const handleSaveToFile = useCallback(() => {
         try {
             const dataStr = JSON.stringify(appData, null, 2);
@@ -1188,8 +1202,8 @@ export default function App() {
                         if (data && typeof data === 'object' && typeof data.users === 'object' && typeof data.recipes === 'object' && typeof data.mealPlans === 'object' && data.adminUser !== undefined) {
                              setConfirmAction({
                                 action: () => {
-                                    setAppData(data);
-                                    displayToast('Data återställd från fil!', 'success');
+                                    setAppData(data); // Detta kommer att trigga sparning till servern
+                                    displayToast('Data återställd från fil och sparas till molnet!', 'success');
                                     setCurrentUser(null);
                                     setWasAdminOnLogout(false);
                                     setModals({ 
@@ -1199,7 +1213,7 @@ export default function App() {
                                     });
                                 },
                                 title: "Återställ från fil",
-                                text: "Detta kommer att skriva över all nuvarande data med innehållet från filen. Är du säker?",
+                                text: "Detta kommer att skriva över all data i molnet med innehållet från filen. Är du säker?",
                                 isDanger: true,
                                 confirmText: "Ja, återställ"
                             });
@@ -1261,7 +1275,6 @@ export default function App() {
                                     finalId = `${recipe.id}_imp_${Date.now()}${Math.floor(Math.random() * 1000)}`;
                                     renamedCount++;
                                 }
-                                // Assign the current user as the creator
                                 newRecipes[finalId] = { ...recipe, id: finalId, createdBy: currentUser! };
                                 importedCount++;
                             }
@@ -1298,7 +1311,7 @@ export default function App() {
     const currentMealPlan = currentUser ? appData.mealPlans[currentUser]?.[weekId] : {};
 
     if (isLoading) {
-        return <LoadingScreen />;
+        return <LoadingScreen message="Synkroniserar med molnet..." />;
     }
 
     if (!currentUser) {
