@@ -32,9 +32,10 @@ export default function App() {
     const [userToTransferFrom, setUserToTransferFrom] = useState<string | null>(null);
     const [userToResetPassword, setUserToResetPassword] = useState<string | null>(null);
     
+    // activeDayTab kan nu också vara 'översikt'
     const [activeDayTab, setActiveDayTab] = useState('måndag');
     
-    // NY STATE: Växlar mellan huvudvyer på mobil (plan eller recipes)
+    // Växlar mellan huvudvyer på mobil (plan eller recipes)
     const [activeMobileTab, setActiveMobileTab] = useState<'plan' | 'recipes'>('plan');
 
     useEffect(() => {
@@ -343,6 +344,13 @@ export default function App() {
                     </div>
 
                     <div className="flex md:hidden overflow-x-auto pb-3 mb-4 space-x-2 snap-x hide-scrollbar">
+                        {/* NY FLIK: Översikt */}
+                        <button
+                            onClick={() => setActiveDayTab('översikt')}
+                            className={`snap-start whitespace-nowrap px-4 py-2.5 rounded-full text-sm font-bold shadow-sm transition-all border ${activeDayTab === 'översikt' ? 'bg-sky-600 text-white border-sky-600' : 'bg-white text-slate-600 border-slate-200'}`}
+                        >
+                            Översikt
+                        </button>
                         {daysOfWeek.map(dayName => {
                             const dayKey = dayName.toLowerCase();
                             const isActive = activeDayTab === dayKey;
@@ -364,10 +372,16 @@ export default function App() {
                             const dayKey = dayName.toLowerCase();
                             const recipeId = currentMealPlan?.[dayKey]?.['middag'];
                             const recipe = recipeId ? appData.recipes[recipeId] : null;
+                            
+                            // Om 'översikt' är vald visas alla, annars bara den valda fliken
+                            const isVisibleOnMobile = activeDayTab === 'översikt' || activeDayTab === dayKey;
 
                             return (
-                                <div key={dayKey} className={`flex-col space-y-2 ${activeDayTab === dayKey ? 'flex' : 'hidden md:flex'}`}>
-                                    <h3 className="font-bold text-center text-slate-700 hidden md:block">{dayName} <span className="text-sm font-normal text-slate-500">{dayDate.getDate()}/{dayDate.getMonth()+1}</span></h3>
+                                <div key={dayKey} className={`flex-col space-y-2 ${isVisibleOnMobile ? 'flex' : 'hidden md:flex'}`}>
+                                    {/* H3 visas alltid på desktop. På mobil visas den bara om vi är i "Översikt"-läget */}
+                                    <h3 className={`font-bold text-slate-700 ${activeDayTab === 'översikt' ? 'block text-left pl-1 mt-2' : 'hidden md:block md:text-center'}`}>
+                                        {dayName} <span className="text-sm font-normal text-slate-500">{dayDate.getDate()}/{dayDate.getMonth()+1}</span>
+                                    </h3>
                                     <div 
                                         onClick={() => { if (!recipe) { setTargetSlot({ day: dayKey, dayName: dayName }); setModals(p => ({ ...p, selectRecipe: true })); } }}
                                         onDragOver={(e) => e.preventDefault()}
