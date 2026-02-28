@@ -55,7 +55,7 @@ export default async function handler(request: Request) {
         const jsonText = response.text;
         
         // We parse and stringify to ensure it's valid and clean before sending.
-        const generatedData = JSON.parse(jsonText);
+        const generatedData = JSON.parse(jsonText || '{}');
 
         return new Response(JSON.stringify(generatedData), {
             status: 200,
