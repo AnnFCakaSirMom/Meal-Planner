@@ -33,6 +33,9 @@ export default function App() {
     const [userToResetPassword, setUserToResetPassword] = useState<string | null>(null);
     
     const [activeDayTab, setActiveDayTab] = useState('måndag');
+    
+    // NY STATE: Växlar mellan huvudvyer på mobil (plan eller recipes)
+    const [activeMobileTab, setActiveMobileTab] = useState<'plan' | 'recipes'>('plan');
 
     useEffect(() => {
         const loadDataFromServer = async () => {
@@ -306,7 +309,7 @@ export default function App() {
     }
     
     return (
-        <div className="container mx-auto p-3 md:p-8 max-w-7xl">
+        <div className="container mx-auto p-3 md:p-8 max-w-7xl pb-24 lg:pb-8">
             {toastInfo && <Toast message={toastInfo.message} type={toastInfo.type} show={showToast} />}
             <RecipeFormModal isOpen={modals.recipeForm} onClose={() => setModals(p => ({ ...p, recipeForm: false }))} onSave={handleSaveRecipe} recipeToEdit={recipeToEdit} showToast={displayToast} />
             <ViewRecipeModal isOpen={modals.viewRecipe} onClose={handleCloseViewRecipe} recipe={recipeToView} showToast={displayToast}/>
@@ -316,20 +319,20 @@ export default function App() {
             
             <header className="flex flex-col md:block text-center mb-6 md:mb-10 relative">
                 <h1 className="text-3xl md:text-6xl font-bold bg-clip-text text-transparent bg-gradient-to-br from-sky-600 to-teal-600 pb-1">Matplanerare</h1>
-                <p className="text-slate-500 mt-1 text-xs md:text-lg hidden sm:block">Planera din vecka, en middag i taget.</p>
                 <div className="flex md:absolute md:top-0 md:right-0 items-center justify-center space-x-2 mt-2 md:mt-0">
                     <div className="flex items-center space-x-1 bg-white/50 px-2 py-1 rounded-full border border-slate-200 shadow-sm">
-                        <span className="font-semibold text-slate-700 text-sm md:text-base">{currentUser}{currentUser === appData.adminUser ? ' (Admin)' : ''}</span>
+                        <span className="font-semibold text-slate-700 text-sm md:text-base">{currentUser}</span>
                         <button onClick={handleSwitchUser} className="p-1.5 text-slate-500 hover:text-sky-600 transition-colors" title="Logga ut"><LogoutIcon /></button>
                     </div>
-                     <button onClick={() => setModals(p => ({ ...p, settings: true }))} className="p-2 bg-white/50 text-slate-500 hover:text-sky-600 border border-slate-200 shadow-sm rounded-full transition-colors" title="Datahantering & Backup">
+                     <button onClick={() => setModals(p => ({ ...p, settings: true }))} className="p-2 bg-white/50 text-slate-500 hover:text-sky-600 border border-slate-200 shadow-sm rounded-full transition-colors" title="Inställningar">
                         <SettingsIcon />
                     </button>
                 </div>
             </header>
 
             <main className="grid grid-cols-1 lg:grid-cols-4 gap-6 md:gap-8">
-                <div className="panel p-3 md:p-6 lg:col-span-3">
+                {/* VECKOPLAN: Visas på dator ELLER om 'plan' är vald på mobil */}
+                <div className={`panel p-3 md:p-6 lg:col-span-3 ${activeMobileTab === 'plan' ? 'block' : 'hidden lg:block'}`}>
                     <div className="flex justify-between items-center mb-4 md:mb-6">
                         <h2 className="text-lg md:text-2xl font-bold text-slate-800">Veckoplan</h2>
                         <div className="flex items-center space-x-1 md:space-x-2">
@@ -379,18 +382,8 @@ export default function App() {
                                             <>
                                                 <p className="font-bold text-base md:text-sm flex-grow break-words text-slate-800 pointer-events-none leading-tight">{recipe.name}</p>
                                                 <div className="flex gap-2 mt-4 md:mt-1">
-                                                    <button 
-                                                        onClick={(e) => { e.stopPropagation(); handleViewRecipe(recipe); }} 
-                                                        className="flex-1 bg-sky-50 text-sky-700 py-2.5 md:py-1 rounded-xl text-sm font-bold hover:bg-sky-100 transition-colors border border-sky-100"
-                                                    >
-                                                        Visa
-                                                    </button>
-                                                    <button 
-                                                        onClick={(e) => { e.stopPropagation(); handleUpdateMealPlan(dayKey, null); }} 
-                                                        className="flex-1 bg-red-50 text-red-600 py-2.5 md:py-1 rounded-xl text-sm font-bold hover:bg-red-100 transition-colors border border-red-100"
-                                                    >
-                                                        Radera
-                                                    </button>
+                                                    <button onClick={(e) => { e.stopPropagation(); handleViewRecipe(recipe); }} className="flex-1 bg-sky-50 text-sky-700 py-2.5 md:py-1 rounded-xl text-sm font-bold border border-sky-100">Visa</button>
+                                                    <button onClick={(e) => { e.stopPropagation(); handleUpdateMealPlan(dayKey, null); }} className="flex-1 bg-red-50 text-red-600 py-2.5 md:py-1 rounded-xl text-sm font-bold border border-red-100">Radera</button>
                                                 </div>
                                             </>
                                         ) : (
@@ -406,8 +399,33 @@ export default function App() {
                     </div>
                 </div>
 
-                <RecipeListPanel recipes={appData.recipes} currentUser={currentUser} adminUser={appData.adminUser} onAdd={handleAddRecipe} onEdit={handleEditRecipe} onDelete={handleDeleteRecipe} />
+                {/* RECEPTBANK: Visas på dator ELLER om 'recipes' är vald på mobil */}
+                <div className={`${activeMobileTab === 'recipes' ? 'block' : 'hidden lg:block'} lg:col-span-1`}>
+                    <RecipeListPanel recipes={appData.recipes} currentUser={currentUser} adminUser={appData.adminUser} onAdd={handleAddRecipe} onEdit={handleEditRecipe} onDelete={handleDeleteRecipe} />
+                </div>
             </main>
+
+            {/* BOTTENMENY: Visas bara på mobil */}
+            <nav className="fixed bottom-0 left-0 right-0 bg-white/90 backdrop-blur-lg border-t border-slate-200 lg:hidden z-40 px-6 py-3 flex justify-around items-center shadow-[0_-4px_12px_rgba(0,0,0,0.05)]">
+                <button 
+                    onClick={() => setActiveMobileTab('plan')}
+                    className={`flex flex-col items-center space-y-1 transition-colors ${activeMobileTab === 'plan' ? 'text-sky-600' : 'text-slate-400'}`}
+                >
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                    </svg>
+                    <span className="text-[10px] font-bold uppercase tracking-wider">Veckoplan</span>
+                </button>
+                <button 
+                    onClick={() => setActiveMobileTab('recipes')}
+                    className={`flex flex-col items-center space-y-1 transition-colors ${activeMobileTab === 'recipes' ? 'text-sky-600' : 'text-slate-400'}`}
+                >
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.584.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+                    </svg>
+                    <span className="text-[10px] font-bold uppercase tracking-wider">Receptbank</span>
+                </button>
+            </nav>
         </div>
     );
 }
