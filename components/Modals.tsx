@@ -335,6 +335,7 @@ export const RecipeFormModal: React.FC<RecipeFormModalProps> = ({ isOpen, onClos
     );
 };
 
+// --- HÄR BÖRJAR DEN NYA DRAWER-VERSIONEN AV VIEW RECIPE ---
 export interface ViewRecipeModalProps {
     isOpen: boolean;
     onClose: () => void;
@@ -351,11 +352,21 @@ export const ViewRecipeModal: React.FC<ViewRecipeModalProps> = ({ isOpen, onClos
             setCopyButtonText('Kopiera');
         }
     }, [isOpen, recipe]);
+
+    // Gör så att man kan stänga panelen med Escape-knappen
+    useEffect(() => {
+        const handleEsc = (event: KeyboardEvent) => {
+            if (event.key === 'Escape' && isOpen) onClose();
+        };
+        window.addEventListener('keydown', handleEsc);
+        return () => window.removeEventListener('keydown', handleEsc);
+    }, [isOpen, onClose]);
     
-    if (!isOpen || !recipe) return null;
+    // Vi renderar panelen även om den är stängd (men gömmer den) för att få till snygga glid-animationer!
+    const isVisible = isOpen && recipe !== null;
 
     const calculatedIngredients = (() => {
-        if (!recipe.ingredients) return [];
+        if (!recipe?.ingredients) return [];
         const newPortions = portions;
         const originalPortions = recipe.originalPortions || 1;
         const lines = recipe.ingredients.split('\n').filter(line => line.trim() !== '');
@@ -374,6 +385,7 @@ export const ViewRecipeModal: React.FC<ViewRecipeModalProps> = ({ isOpen, onClos
     })();
     
     const handleCopy = () => {
+        if (!recipe) return;
         const ingredientsText = calculatedIngredients.map(ing => `- ${ing}`).join('\n');
         const instructionsText = (recipe.instructions || '').split('\n').filter(Boolean).map((step, i) => `${i+1}. ${step}`).join('\n');
         const fullText = `RECEPT: ${recipe.name}\n\nPORTIONER: ${portions}\n\nINGREDIENSER:\n${ingredientsText}\n\nINSTRUKTIONER:\n${instructionsText}`;
@@ -381,49 +393,67 @@ export const ViewRecipeModal: React.FC<ViewRecipeModalProps> = ({ isOpen, onClos
         navigator.clipboard.writeText(fullText).then(() => {
             setCopyButtonText('Kopierat!');
             setTimeout(() => setCopyButtonText('Kopiera'), 2000);
-        }).catch(err => {
+        }).catch(() => {
             showToast('Kunde inte kopiera texten.', 'error');
         });
     }
 
     return (
-        <Modal isOpen={isOpen} onClose={onClose} size="2xl">
-            <div className="max-h-[85vh] flex flex-col">
-                <div className="flex-shrink-0">
-                    <div className="flex justify-between items-start">
-                         <h3 className="text-3xl font-bold mb-2 text-slate-800">{recipe.name}</h3>
-                         <p className="text-sm text-slate-500 mt-2">Skapad av: {recipe.createdBy}</p>
+        <>
+            {/* Suddig mörk bakgrund som tonar in */}
+            <div 
+                className={`fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-40 transition-opacity duration-300 ${isVisible ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
+                onClick={onClose}
+            ></div>
+
+            {/* Själva sidopanelen (Drawer) som glider in från höger */}
+            <div className={`fixed inset-y-0 right-0 z-50 w-full max-w-md bg-white/95 backdrop-blur-xl shadow-2xl transform transition-transform duration-300 ease-in-out ${isVisible ? 'translate-x-0' : 'translate-x-full'} flex flex-col`}>
+                
+                {/* Huvud (Titel och Stäng-kryss) */}
+                <div className="p-6 border-b border-slate-200/50 flex justify-between items-start flex-shrink-0">
+                    <div className="pr-4">
+                        <h3 className="text-2xl font-bold text-slate-800">{recipe?.name}</h3>
+                        <p className="text-sm text-slate-500 mt-1">Skapad av: {recipe?.createdBy}</p>
                     </div>
-                    <div className="border-b border-slate-300/60 mb-6 pb-4"></div>
+                    <button onClick={onClose} className="p-2 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-full transition-colors flex-shrink-0">
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" /></svg>
+                    </button>
                 </div>
-                <div className="flex-grow overflow-y-auto pr-4">
-                    <div className="flex flex-col md:flex-row gap-8">
-                        <div className="w-full md:w-1/3">
-                            <h4 className="text-xl font-semibold mb-2 text-slate-800">Ingredienser</h4>
-                            <div className="flex items-center space-x-2 mb-3">
-                                <label htmlFor="view-portions-input" className="text-sm font-medium text-slate-600">Portioner:</label>
-                                <input type="number" id="view-portions-input" min="1" value={portions} onChange={e => setPortions(parseInt(e.target.value, 10) || 1)} className="w-16 p-1 border rounded-md text-center border-slate-300 focus:ring-sky-500 focus:border-sky-500" />
+
+                {/* Innehåll (Ingredienser och Instruktioner) */}
+                <div className="p-6 flex-grow overflow-y-auto">
+                    <div className="mb-8">
+                        <div className="flex items-center justify-between mb-3">
+                            <h4 className="text-xl font-semibold text-slate-800">Ingredienser</h4>
+                            <div className="flex items-center space-x-2 bg-white px-2 py-1 rounded-lg border border-slate-200 shadow-sm">
+                                <label htmlFor="drawer-portions" className="text-sm font-medium text-slate-600">Portioner:</label>
+                                <input type="number" id="drawer-portions" min="1" value={portions} onChange={e => setPortions(parseInt(e.target.value, 10) || 1)} className="w-12 text-center text-sm focus:outline-none focus:text-sky-600 font-semibold" />
                             </div>
-                            <ul className="list-disc list-inside text-slate-700 space-y-1">
-                                {calculatedIngredients.map((ing, i) => <li key={i}>{ing}</li>)}
-                            </ul>
                         </div>
-                        <div className="w-full md:w-2/3">
-                            <h4 className="text-xl font-semibold mb-3 text-slate-800">Instruktioner</h4>
-                            <ol className="list-decimal list-inside text-slate-700 space-y-4">
-                                {(recipe.instructions || '').split('\n').filter(Boolean).map((step, i) => <li key={i}>{step}</li>)}
-                            </ol>
-                        </div>
+                        <ul className="list-disc list-inside text-slate-700 space-y-2">
+                            {calculatedIngredients.map((ing, i) => <li key={i}>{ing}</li>)}
+                        </ul>
+                    </div>
+                    
+                    <div>
+                        <h4 className="text-xl font-semibold mb-3 text-slate-800">Instruktioner</h4>
+                        <ol className="list-decimal list-inside text-slate-700 space-y-4">
+                            {(recipe?.instructions || '').split('\n').filter(Boolean).map((step, i) => <li key={i}>{step}</li>)}
+                        </ol>
                     </div>
                 </div>
-                 <div className="flex justify-end mt-8 space-x-4 flex-shrink-0">
-                    <Button variant="primary" onClick={handleCopy}><CopyIcon /> <span>{copyButtonText}</span></Button>
+
+                {/* Fot (Knappar) */}
+                <div className="p-6 border-t border-slate-200/50 flex-shrink-0 flex justify-end space-x-3 bg-slate-50/50">
                     <Button variant="secondary" onClick={onClose}>Stäng</Button>
+                    <Button variant="primary" onClick={handleCopy}><CopyIcon /> <span>{copyButtonText}</span></Button>
                 </div>
             </div>
-        </Modal>
+        </>
     );
 };
+// --- HÄR SLUTAR DEN NYA DRAWER-VERSIONEN ---
+
 
 export interface SelectRecipeModalProps {
     isOpen: boolean;
