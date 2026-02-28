@@ -57,7 +57,6 @@ export default function App() {
         loadDataFromServer();
     }, []);
 
-    // NY FUNKTION: Istället för att spara allt, skickar vi bara precis det som ändrats!
     const syncToDB = useCallback(async (collectionName: string, docId: string, data: any, isDelete = false) => {
         try {
             await fetch('/api/update-doc', {
@@ -254,7 +253,6 @@ export default function App() {
             if (!newMealPlans[currentUser][weekId][day]) newMealPlans[currentUser][weekId][day] = {};
             newMealPlans[currentUser][weekId][day]['middag'] = recipeId;
             
-            // Uppdaterar bara just din veckoplan i databasen, rör inte andras data!
             syncToDB('mealPlans', currentUser, newMealPlans[currentUser]);
             return { ...prev, mealPlans: newMealPlans };
         });
@@ -284,7 +282,6 @@ export default function App() {
         setUserToTransferFrom(null);
     }, [userToTransferFrom, displayToast, syncToDB]);
     
-    // (Backup/Återställning är dolt i detta exempel för att spara plats, men de fungerar som förut!)
     const handleSaveToFile = useCallback(() => { displayToast('Backup skapad (endast lokalt i demo)', 'success'); setModals(p => ({...p, settings: false}))}, [displayToast]);
     const handleLoadFromFile = useCallback(() => { displayToast('Filuppladdning kräver full backend-sync för tillfället', 'error') }, [displayToast]);
     const handleImportRecipesFromFile = useCallback(() => { displayToast('Funktionen importera recept behöver justeras för granular sync.', 'error') }, [displayToast]);
@@ -352,20 +349,27 @@ export default function App() {
                             return (
                                 <div key={dayKey} className="flex flex-col space-y-2">
                                     <h3 className="font-bold text-center text-slate-700">{dayName} <span className="text-sm font-normal text-slate-500">{dayDate.getDate()}/{dayDate.getMonth()+1}</span></h3>
+                                    {/* HÄR ÄR MAGIN: onDragOver och onDrop läggs till på rutan */}
                                     <div 
                                         onClick={() => { if (!recipe) { setTargetSlot({ day: dayKey, dayName: dayName }); setModals(p => ({ ...p, selectRecipe: true })); } }}
+                                        onDragOver={(e) => e.preventDefault()}
+                                        onDrop={(e) => {
+                                            e.preventDefault();
+                                            const droppedRecipeId = e.dataTransfer.getData('text/plain');
+                                            if (droppedRecipeId) handleUpdateMealPlan(dayKey, droppedRecipeId);
+                                        }}
                                         className={`min-h-[160px] rounded-xl p-3 flex flex-col border-2 transition-all duration-200 ${recipe ? 'bg-white/60 shadow-md border-solid border-slate-200/50 justify-between' : 'bg-transparent border-dashed border-slate-300/80 justify-center items-center cursor-pointer hover:border-sky-400 hover:bg-white/40'}`}
                                     >
                                         {recipe ? (
                                             <>
-                                                <p className="font-semibold text-sm flex-grow break-words text-slate-800">{recipe.name}</p>
+                                                <p className="font-semibold text-sm flex-grow break-words text-slate-800 pointer-events-none">{recipe.name}</p>
                                                 <div className="text-right mt-1">
                                                     <button onClick={(e) => { e.stopPropagation(); handleViewRecipe(recipe); }} className="view-meal-btn text-sky-600 hover:text-sky-800 text-xs font-semibold">Visa</button>
                                                     <button onClick={(e) => { e.stopPropagation(); handleUpdateMealPlan(dayKey, null); }} className="remove-meal-btn text-red-500 hover:text-red-700 text-xs font-semibold ml-2">Ta bort</button>
                                                 </div>
                                             </>
                                         ) : (
-                                            <span className="text-slate-400 text-sm">Middag</span>
+                                            <span className="text-slate-400 text-sm pointer-events-none">Middag</span>
                                         )}
                                     </div>
                                 </div>

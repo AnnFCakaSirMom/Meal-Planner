@@ -46,8 +46,13 @@ export const RecipeListPanel: React.FC<RecipeListPanelProps> = ({ recipes, curre
                 {filteredRecipes.length > 0 ? filteredRecipes.map((recipe: Recipe) => {
                     const canEdit = recipe.createdBy === currentUser || currentUser === adminUser;
                     return (
-                        <div key={recipe.id} className="bg-white/60 p-4 rounded-lg shadow-sm flex justify-between items-center border border-slate-200/50">
-                            <div>
+                        <div 
+                            key={recipe.id} 
+                            draggable 
+                            onDragStart={(e) => e.dataTransfer.setData('text/plain', recipe.id)}
+                            className="bg-white/60 p-4 rounded-lg shadow-sm flex justify-between items-center border border-slate-200/50 cursor-grab active:cursor-grabbing hover:shadow-md hover:border-sky-300 transition-all"
+                        >
+                            <div className="pointer-events-none">
                                 <p className="font-semibold text-slate-800">{recipe.name}</p>
                                 <p className="text-xs text-slate-400">Skapad av: {recipe.createdBy || 'Okänd'}</p>
                             </div>
