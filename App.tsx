@@ -35,6 +35,9 @@ export default function App() {
     const [userToTransferFrom, setUserToTransferFrom] = useState<string | null>(null);
     const [userToResetPassword, setUserToResetPassword] = useState<string | null>(null);
     
+    // NY STATE: Håller koll på vilken flik/dag som är vald på mobilen
+    const [activeDayTab, setActiveDayTab] = useState('måndag');
+
     useEffect(() => {
         const loadDataFromServer = async () => {
             try {
@@ -316,11 +319,11 @@ export default function App() {
             <ConfirmModal isOpen={modals.confirm} onClose={() => setModals(p => ({ ...p, confirm: false }))} onConfirm={() => { if(confirmAction) { confirmAction.action(); setConfirmAction(null); } setModals(p=>({...p, confirm: false})); }} title={confirmAction?.title || ""} text={confirmAction?.text || ""} isDanger={confirmAction?.isDanger} confirmText={confirmAction?.confirmText} />
             
             <header className="text-center mb-10 relative">
-                <h1 className="text-5xl md:text-6xl font-bold bg-clip-text text-transparent bg-gradient-to-br from-sky-600 to-teal-600 pb-2">Matplanerare</h1>
-                <p className="text-slate-500 mt-2 text-lg">Planera din vecka, en middag i taget.</p>
+                <h1 className="text-4xl md:text-6xl font-bold bg-clip-text text-transparent bg-gradient-to-br from-sky-600 to-teal-600 pb-2">Matplanerare</h1>
+                <p className="text-slate-500 mt-2 text-sm md:text-lg">Planera din vecka, en middag i taget.</p>
                 <div className="absolute top-0 right-0 flex items-center space-x-2">
                     <div className="flex items-center space-x-2">
-                        <span className="font-semibold text-slate-700">{currentUser}{currentUser === appData.adminUser ? ' (Admin)' : ''}</span>
+                        <span className="font-semibold text-slate-700 hidden md:inline">{currentUser}{currentUser === appData.adminUser ? ' (Admin)' : ''}</span>
                         <button onClick={handleSwitchUser} className="p-2 text-slate-500 hover:text-sky-600 hover:bg-white/50 rounded-full transition-colors" title="Logga ut"><LogoutIcon /></button>
                     </div>
                      <button onClick={() => setModals(p => ({ ...p, settings: true }))} className="p-2 text-slate-500 hover:text-sky-600 hover:bg-white/50 rounded-full transition-colors" title="Datahantering & Backup">
@@ -330,16 +333,35 @@ export default function App() {
             </header>
 
             <main className="grid grid-cols-1 lg:grid-cols-4 gap-8">
-                <div className="panel p-6 lg:col-span-3">
-                    <div className="flex justify-between items-center mb-6">
-                        <h2 className="text-2xl font-bold text-slate-800">Veckoplan</h2>
+                <div className="panel p-4 md:p-6 lg:col-span-3">
+                    <div className="flex justify-between items-center mb-4 md:mb-6">
+                        <h2 className="text-xl md:text-2xl font-bold text-slate-800">Veckoplan</h2>
                         <div className="flex items-center space-x-2">
                             <button onClick={() => setCurrentDate(d => new Date(d.setDate(d.getDate() - 7)))} className="p-2 rounded-full hover:bg-black/5 transition-colors text-slate-500 hover:text-slate-700"><PrevIcon /></button>
-                            <span className="text-lg font-semibold w-32 text-center text-slate-700">Vecka {weekId.split('-W')[1]}</span>
+                            <span className="text-base md:text-lg font-semibold w-24 md:w-32 text-center text-slate-700">Vecka {weekId.split('-W')[1]}</span>
                             <button onClick={() => setCurrentDate(d => new Date(d.setDate(d.getDate() + 7)))} className="p-2 rounded-full hover:bg-black/5 transition-colors text-slate-500 hover:text-slate-700"><NextIcon /></button>
                         </div>
                     </div>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-7 gap-4">
+
+                    {/* MOBIL-FLIKAR: Visas bara på små skärmar (md:hidden) */}
+                    <div className="flex md:hidden overflow-x-auto pb-3 mb-4 space-x-2 snap-x hide-scrollbar">
+                        {daysOfWeek.map(dayName => {
+                            const dayKey = dayName.toLowerCase();
+                            const isActive = activeDayTab === dayKey;
+                            return (
+                                <button
+                                    key={`tab-${dayKey}`}
+                                    onClick={() => setActiveDayTab(dayKey)}
+                                    className={`snap-start whitespace-nowrap px-4 py-2 rounded-full text-sm font-semibold transition-all ${isActive ? 'bg-sky-600 text-white shadow-md' : 'bg-slate-200/70 text-slate-600 hover:bg-slate-300'}`}
+                                >
+                                    {dayName.slice(0,3)} {/* Förkortar till Mån, Tis osv på mobil */}
+                                </button>
+                            );
+                        })}
+                    </div>
+
+                    {/* VECKOPLAN GRID: Gömmer de dagar som inte är aktiva fliken på mobilen */}
+                    <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-7 gap-4">
                         {daysOfWeek.map((dayName, i) => {
                             const dayDate = new Date(weekStart); dayDate.setDate(weekStart.getDate() + i);
                             const dayKey = dayName.toLowerCase();
@@ -347,9 +369,8 @@ export default function App() {
                             const recipe = recipeId ? appData.recipes[recipeId] : null;
 
                             return (
-                                <div key={dayKey} className="flex flex-col space-y-2">
+                                <div key={dayKey} className={`flex-col space-y-2 ${activeDayTab === dayKey ? 'flex' : 'hidden md:flex'}`}>
                                     <h3 className="font-bold text-center text-slate-700">{dayName} <span className="text-sm font-normal text-slate-500">{dayDate.getDate()}/{dayDate.getMonth()+1}</span></h3>
-                                    {/* HÄR ÄR MAGIN: onDragOver och onDrop läggs till på rutan */}
                                     <div 
                                         onClick={() => { if (!recipe) { setTargetSlot({ day: dayKey, dayName: dayName }); setModals(p => ({ ...p, selectRecipe: true })); } }}
                                         onDragOver={(e) => e.preventDefault()}
@@ -363,13 +384,13 @@ export default function App() {
                                         {recipe ? (
                                             <>
                                                 <p className="font-semibold text-sm flex-grow break-words text-slate-800 pointer-events-none">{recipe.name}</p>
-                                                <div className="text-right mt-1">
-                                                    <button onClick={(e) => { e.stopPropagation(); handleViewRecipe(recipe); }} className="view-meal-btn text-sky-600 hover:text-sky-800 text-xs font-semibold">Visa</button>
-                                                    <button onClick={(e) => { e.stopPropagation(); handleUpdateMealPlan(dayKey, null); }} className="remove-meal-btn text-red-500 hover:text-red-700 text-xs font-semibold ml-2">Ta bort</button>
+                                                <div className="text-right mt-1 pt-2 border-t border-slate-200/50 flex justify-between items-center">
+                                                    <button onClick={(e) => { e.stopPropagation(); handleViewRecipe(recipe); }} className="view-meal-btn text-sky-600 hover:text-sky-800 text-sm font-semibold py-1 px-2 -ml-2 rounded hover:bg-sky-50 transition-colors">Visa</button>
+                                                    <button onClick={(e) => { e.stopPropagation(); handleUpdateMealPlan(dayKey, null); }} className="remove-meal-btn text-red-500 hover:text-red-700 text-sm font-semibold py-1 px-2 -mr-2 rounded hover:bg-red-50 transition-colors">Ta bort</button>
                                                 </div>
                                             </>
                                         ) : (
-                                            <span className="text-slate-400 text-sm pointer-events-none">Middag</span>
+                                            <span className="text-slate-400 text-sm pointer-events-none">+ Lägg till</span>
                                         )}
                                     </div>
                                 </div>
