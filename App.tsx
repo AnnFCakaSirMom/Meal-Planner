@@ -16,17 +16,14 @@ export default function App() {
     const [currentDate, setCurrentDate] = useState(new Date());
     const isInitialized = useRef(false);
     
-    // Toast state
     const [toastInfo, setToastInfo] = useState<{ message: string; type: 'success' | 'error', key: number } | null>(null);
     const [showToast, setShowToast] = useState(false);
 
-    // Modal states
     const [modals, setModals] = useState({
         user: true, recipeForm: false, viewRecipe: false, selectRecipe: false,
         settings: false, confirm: false, renameUser: false, transferRecipes: false, resetPassword: false,
     });
     
-    // State for modal data
     const [recipeToEdit, setRecipeToEdit] = useState<Recipe | null>(null);
     const [recipeToView, setRecipeToView] = useState<Recipe | null>(null);
     const [targetSlot, setTargetSlot] = useState<{ day: string, dayName: string } | null>(null);
@@ -35,7 +32,6 @@ export default function App() {
     const [userToTransferFrom, setUserToTransferFrom] = useState<string | null>(null);
     const [userToResetPassword, setUserToResetPassword] = useState<string | null>(null);
     
-    // NY STATE: Håller koll på vilken flik/dag som är vald på mobilen
     const [activeDayTab, setActiveDayTab] = useState('måndag');
 
     useEffect(() => {
@@ -310,7 +306,7 @@ export default function App() {
     }
     
     return (
-        <div className="container mx-auto p-4 md:p-8 max-w-7xl">
+        <div className="container mx-auto p-3 md:p-8 max-w-7xl">
             {toastInfo && <Toast message={toastInfo.message} type={toastInfo.type} show={showToast} />}
             <RecipeFormModal isOpen={modals.recipeForm} onClose={() => setModals(p => ({ ...p, recipeForm: false }))} onSave={handleSaveRecipe} recipeToEdit={recipeToEdit} showToast={displayToast} />
             <ViewRecipeModal isOpen={modals.viewRecipe} onClose={handleCloseViewRecipe} recipe={recipeToView} showToast={displayToast}/>
@@ -318,32 +314,31 @@ export default function App() {
             <SettingsModal isOpen={modals.settings} onClose={() => setModals(p => ({ ...p, settings: false }))} onSave={handleSaveToFile} onLoad={handleLoadFromFile} onImportRecipes={handleImportRecipesFromFile} />
             <ConfirmModal isOpen={modals.confirm} onClose={() => setModals(p => ({ ...p, confirm: false }))} onConfirm={() => { if(confirmAction) { confirmAction.action(); setConfirmAction(null); } setModals(p=>({...p, confirm: false})); }} title={confirmAction?.title || ""} text={confirmAction?.text || ""} isDanger={confirmAction?.isDanger} confirmText={confirmAction?.confirmText} />
             
-            <header className="text-center mb-10 relative">
-                <h1 className="text-4xl md:text-6xl font-bold bg-clip-text text-transparent bg-gradient-to-br from-sky-600 to-teal-600 pb-2">Matplanerare</h1>
-                <p className="text-slate-500 mt-2 text-sm md:text-lg">Planera din vecka, en middag i taget.</p>
-                <div className="absolute top-0 right-0 flex items-center space-x-2">
-                    <div className="flex items-center space-x-2">
-                        <span className="font-semibold text-slate-700 hidden md:inline">{currentUser}{currentUser === appData.adminUser ? ' (Admin)' : ''}</span>
-                        <button onClick={handleSwitchUser} className="p-2 text-slate-500 hover:text-sky-600 hover:bg-white/50 rounded-full transition-colors" title="Logga ut"><LogoutIcon /></button>
+            <header className="flex flex-col md:block text-center mb-6 md:mb-10 relative">
+                <h1 className="text-3xl md:text-6xl font-bold bg-clip-text text-transparent bg-gradient-to-br from-sky-600 to-teal-600 pb-1">Matplanerare</h1>
+                <p className="text-slate-500 mt-1 text-xs md:text-lg hidden sm:block">Planera din vecka, en middag i taget.</p>
+                <div className="flex md:absolute md:top-0 md:right-0 items-center justify-center space-x-2 mt-2 md:mt-0">
+                    <div className="flex items-center space-x-1 bg-white/50 px-2 py-1 rounded-full border border-slate-200 shadow-sm">
+                        <span className="font-semibold text-slate-700 text-sm md:text-base">{currentUser}{currentUser === appData.adminUser ? ' (Admin)' : ''}</span>
+                        <button onClick={handleSwitchUser} className="p-1.5 text-slate-500 hover:text-sky-600 transition-colors" title="Logga ut"><LogoutIcon /></button>
                     </div>
-                     <button onClick={() => setModals(p => ({ ...p, settings: true }))} className="p-2 text-slate-500 hover:text-sky-600 hover:bg-white/50 rounded-full transition-colors" title="Datahantering & Backup">
+                     <button onClick={() => setModals(p => ({ ...p, settings: true }))} className="p-2 bg-white/50 text-slate-500 hover:text-sky-600 border border-slate-200 shadow-sm rounded-full transition-colors" title="Datahantering & Backup">
                         <SettingsIcon />
                     </button>
                 </div>
             </header>
 
-            <main className="grid grid-cols-1 lg:grid-cols-4 gap-8">
-                <div className="panel p-4 md:p-6 lg:col-span-3">
+            <main className="grid grid-cols-1 lg:grid-cols-4 gap-6 md:gap-8">
+                <div className="panel p-3 md:p-6 lg:col-span-3">
                     <div className="flex justify-between items-center mb-4 md:mb-6">
-                        <h2 className="text-xl md:text-2xl font-bold text-slate-800">Veckoplan</h2>
-                        <div className="flex items-center space-x-2">
-                            <button onClick={() => setCurrentDate(d => new Date(d.setDate(d.getDate() - 7)))} className="p-2 rounded-full hover:bg-black/5 transition-colors text-slate-500 hover:text-slate-700"><PrevIcon /></button>
-                            <span className="text-base md:text-lg font-semibold w-24 md:w-32 text-center text-slate-700">Vecka {weekId.split('-W')[1]}</span>
-                            <button onClick={() => setCurrentDate(d => new Date(d.setDate(d.getDate() + 7)))} className="p-2 rounded-full hover:bg-black/5 transition-colors text-slate-500 hover:text-slate-700"><NextIcon /></button>
+                        <h2 className="text-lg md:text-2xl font-bold text-slate-800">Veckoplan</h2>
+                        <div className="flex items-center space-x-1 md:space-x-2">
+                            <button onClick={() => setCurrentDate(d => new Date(d.setDate(d.getDate() - 7)))} className="p-2 rounded-full hover:bg-black/5 transition-colors text-slate-500"><PrevIcon /></button>
+                            <span className="text-sm md:text-lg font-bold w-20 md:w-32 text-center text-slate-700">V {weekId.split('-W')[1]}</span>
+                            <button onClick={() => setCurrentDate(d => new Date(d.setDate(d.getDate() + 7)))} className="p-2 rounded-full hover:bg-black/5 transition-colors text-slate-500"><NextIcon /></button>
                         </div>
                     </div>
 
-                    {/* MOBIL-FLIKAR: Visas bara på små skärmar (md:hidden) */}
                     <div className="flex md:hidden overflow-x-auto pb-3 mb-4 space-x-2 snap-x hide-scrollbar">
                         {daysOfWeek.map(dayName => {
                             const dayKey = dayName.toLowerCase();
@@ -352,15 +347,14 @@ export default function App() {
                                 <button
                                     key={`tab-${dayKey}`}
                                     onClick={() => setActiveDayTab(dayKey)}
-                                    className={`snap-start whitespace-nowrap px-4 py-2 rounded-full text-sm font-semibold transition-all ${isActive ? 'bg-sky-600 text-white shadow-md' : 'bg-slate-200/70 text-slate-600 hover:bg-slate-300'}`}
+                                    className={`snap-start whitespace-nowrap px-4 py-2.5 rounded-full text-sm font-bold shadow-sm transition-all border ${isActive ? 'bg-sky-600 text-white border-sky-600' : 'bg-white text-slate-600 border-slate-200'}`}
                                 >
-                                    {dayName.slice(0,3)} {/* Förkortar till Mån, Tis osv på mobil */}
+                                    {dayName}
                                 </button>
                             );
                         })}
                     </div>
 
-                    {/* VECKOPLAN GRID: Gömmer de dagar som inte är aktiva fliken på mobilen */}
                     <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-7 gap-4">
                         {daysOfWeek.map((dayName, i) => {
                             const dayDate = new Date(weekStart); dayDate.setDate(weekStart.getDate() + i);
@@ -370,7 +364,7 @@ export default function App() {
 
                             return (
                                 <div key={dayKey} className={`flex-col space-y-2 ${activeDayTab === dayKey ? 'flex' : 'hidden md:flex'}`}>
-                                    <h3 className="font-bold text-center text-slate-700">{dayName} <span className="text-sm font-normal text-slate-500">{dayDate.getDate()}/{dayDate.getMonth()+1}</span></h3>
+                                    <h3 className="font-bold text-center text-slate-700 hidden md:block">{dayName} <span className="text-sm font-normal text-slate-500">{dayDate.getDate()}/{dayDate.getMonth()+1}</span></h3>
                                     <div 
                                         onClick={() => { if (!recipe) { setTargetSlot({ day: dayKey, dayName: dayName }); setModals(p => ({ ...p, selectRecipe: true })); } }}
                                         onDragOver={(e) => e.preventDefault()}
@@ -379,18 +373,31 @@ export default function App() {
                                             const droppedRecipeId = e.dataTransfer.getData('text/plain');
                                             if (droppedRecipeId) handleUpdateMealPlan(dayKey, droppedRecipeId);
                                         }}
-                                        className={`min-h-[160px] rounded-xl p-3 flex flex-col border-2 transition-all duration-200 ${recipe ? 'bg-white/60 shadow-md border-solid border-slate-200/50 justify-between' : 'bg-transparent border-dashed border-slate-300/80 justify-center items-center cursor-pointer hover:border-sky-400 hover:bg-white/40'}`}
+                                        className={`min-h-[140px] md:min-h-[160px] rounded-2xl p-4 flex flex-col border-2 transition-all duration-200 ${recipe ? 'bg-white shadow-sm border-solid border-slate-100 justify-between' : 'bg-slate-50/50 border-dashed border-slate-200 justify-center items-center cursor-pointer hover:border-sky-300'}`}
                                     >
                                         {recipe ? (
                                             <>
-                                                <p className="font-semibold text-sm flex-grow break-words text-slate-800 pointer-events-none">{recipe.name}</p>
-                                                <div className="text-right mt-1 pt-2 border-t border-slate-200/50 flex justify-between items-center">
-                                                    <button onClick={(e) => { e.stopPropagation(); handleViewRecipe(recipe); }} className="view-meal-btn text-sky-600 hover:text-sky-800 text-sm font-semibold py-1 px-2 -ml-2 rounded hover:bg-sky-50 transition-colors">Visa</button>
-                                                    <button onClick={(e) => { e.stopPropagation(); handleUpdateMealPlan(dayKey, null); }} className="remove-meal-btn text-red-500 hover:text-red-700 text-sm font-semibold py-1 px-2 -mr-2 rounded hover:bg-red-50 transition-colors">Ta bort</button>
+                                                <p className="font-bold text-base md:text-sm flex-grow break-words text-slate-800 pointer-events-none leading-tight">{recipe.name}</p>
+                                                <div className="flex gap-2 mt-4 md:mt-1">
+                                                    <button 
+                                                        onClick={(e) => { e.stopPropagation(); handleViewRecipe(recipe); }} 
+                                                        className="flex-1 bg-sky-50 text-sky-700 py-2.5 md:py-1 rounded-xl text-sm font-bold hover:bg-sky-100 transition-colors border border-sky-100"
+                                                    >
+                                                        Visa
+                                                    </button>
+                                                    <button 
+                                                        onClick={(e) => { e.stopPropagation(); handleUpdateMealPlan(dayKey, null); }} 
+                                                        className="flex-1 bg-red-50 text-red-600 py-2.5 md:py-1 rounded-xl text-sm font-bold hover:bg-red-100 transition-colors border border-red-100"
+                                                    >
+                                                        Radera
+                                                    </button>
                                                 </div>
                                             </>
                                         ) : (
-                                            <span className="text-slate-400 text-sm pointer-events-none">+ Lägg till</span>
+                                            <div className="flex flex-col items-center space-y-1">
+                                                <div className="w-8 h-8 rounded-full bg-slate-200 flex items-center justify-center text-slate-500">+</div>
+                                                <span className="text-slate-500 text-sm font-medium">Planera middag</span>
+                                            </div>
                                         )}
                                     </div>
                                 </div>
