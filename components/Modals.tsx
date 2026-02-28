@@ -335,7 +335,6 @@ export const RecipeFormModal: React.FC<RecipeFormModalProps> = ({ isOpen, onClos
     );
 };
 
-// --- HÄR BÖRJAR DEN NYA DRAWER-VERSIONEN AV VIEW RECIPE ---
 export interface ViewRecipeModalProps {
     isOpen: boolean;
     onClose: () => void;
@@ -400,9 +399,9 @@ export const ViewRecipeModal: React.FC<ViewRecipeModalProps> = ({ isOpen, onClos
 
     return (
         <>
-            {/* Suddig mörk bakgrund som tonar in */}
+            {/* Osynlig bakgrund som fångar klick för att stänga, utan att sudda ut */}
             <div 
-                className={`fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-40 transition-opacity duration-300 ${isVisible ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
+                className={`fixed inset-0 bg-slate-900/10 z-40 transition-opacity duration-300 ${isVisible ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
                 onClick={onClose}
             ></div>
 
@@ -452,8 +451,6 @@ export const ViewRecipeModal: React.FC<ViewRecipeModalProps> = ({ isOpen, onClos
         </>
     );
 };
-// --- HÄR SLUTAR DEN NYA DRAWER-VERSIONEN ---
-
 
 export interface SelectRecipeModalProps {
     isOpen: boolean;
