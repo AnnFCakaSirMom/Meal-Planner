@@ -3,7 +3,7 @@ import type { AppData, Recipe } from './types';
 import { hashPassword, getWeekId, getWeekStartDate } from './utils/helpers';
 import { LogoutIcon, SettingsIcon, PrevIcon, NextIcon } from './components/Icons';
 import { Toast, LoadingScreen } from './components/UI';
-import { ConfirmModal, UserModal, RenameUserModal, ResetPasswordModal, TransferRecipesModal, RecipeFormModal, ViewRecipeModal, SelectRecipeModal, SettingsModal } from './components/Modals';
+import { ConfirmModal, UserModal, RenameUserModal, ResetPasswordModal, TransferRecipesModal, RecipeFormModal, ViewRecipeModal, SelectRecipeModal, SettingsModal, FridgeCleanupModal } from './components/Modals';
 import { RecipeListPanel } from './components/RecipeListPanel';
 
 const initialAppData: AppData = { users: {}, recipes: {}, mealPlans: {}, adminUser: null };
@@ -15,15 +15,15 @@ export default function App() {
     const [wasAdminOnLogout, setWasAdminOnLogout] = useState(false);
     const [currentDate, setCurrentDate] = useState(new Date());
     const isInitialized = useRef(false);
-    
+
     const [toastInfo, setToastInfo] = useState<{ message: string; type: 'success' | 'error', key: number } | null>(null);
     const [showToast, setShowToast] = useState(false);
 
     const [modals, setModals] = useState({
         user: true, recipeForm: false, viewRecipe: false, selectRecipe: false,
-        settings: false, confirm: false, renameUser: false, transferRecipes: false, resetPassword: false,
+        settings: false, confirm: false, renameUser: false, transferRecipes: false, resetPassword: false, fridgeCleanup: false
     });
-    
+
     const [recipeToEdit, setRecipeToEdit] = useState<Recipe | null>(null);
     const [recipeToView, setRecipeToView] = useState<Recipe | null>(null);
     const [targetSlot, setTargetSlot] = useState<{ day: string, dayName: string } | null>(null);
@@ -31,10 +31,10 @@ export default function App() {
     const [userToRename, setUserToRename] = useState<string | null>(null);
     const [userToTransferFrom, setUserToTransferFrom] = useState<string | null>(null);
     const [userToResetPassword, setUserToResetPassword] = useState<string | null>(null);
-    
+
     // activeDayTab kan nu också vara 'översikt'
     const [activeDayTab, setActiveDayTab] = useState('måndag');
-    
+
     // Växlar mellan huvudvyer på mobil (plan eller recipes)
     const [activeMobileTab, setActiveMobileTab] = useState<'plan' | 'recipes'>('plan');
 
@@ -71,17 +71,17 @@ export default function App() {
             console.error('Kunde inte synka till databasen:', error);
         }
     }, []);
-    
+
     const displayToast = useCallback((message: string, type: 'success' | 'error' = 'success') => {
         setToastInfo({ message, type, key: Date.now() });
     }, []);
 
     useEffect(() => {
-      if (toastInfo) {
-        setShowToast(true);
-        const timer = setTimeout(() => setShowToast(false), 3000);
-        return () => clearTimeout(timer);
-      }
+        if (toastInfo) {
+            setShowToast(true);
+            const timer = setTimeout(() => setShowToast(false), 3000);
+            return () => clearTimeout(timer);
+        }
     }, [toastInfo]);
 
     const handleLogin = useCallback(async (username: string, pass: string) => {
@@ -117,7 +117,7 @@ export default function App() {
         displayToast('Lösenord sparat!', 'success');
         await handleLogin(username, pass);
     }, [displayToast, handleLogin, syncToDB]);
-    
+
     const handleResetPassword = useCallback(async (password: string) => {
         if (!userToResetPassword) return;
         const passHash = await hashPassword(password);
@@ -128,15 +128,15 @@ export default function App() {
         setModals(p => ({ ...p, resetPassword: false }));
         setUserToResetPassword(null);
     }, [userToResetPassword, displayToast, syncToDB]);
-    
+
     const openResetPasswordModal = useCallback((user: string) => { setUserToResetPassword(user); setModals(p => ({ ...p, resetPassword: true })); }, []);
 
     const handleSwitchUser = useCallback(() => {
         setWasAdminOnLogout(currentUser === appData.adminUser);
         setCurrentUser(null);
-        setModals(prev => ({...prev, user: true}));
+        setModals(prev => ({ ...prev, user: true }));
     }, [currentUser, appData.adminUser]);
-    
+
     const handleDeleteUser = useCallback(async (userToDelete: string) => {
         return new Promise<boolean>(resolve => {
             setConfirmAction({
@@ -145,8 +145,8 @@ export default function App() {
                         const newUsers = { ...prev.users }; delete newUsers[userToDelete];
                         const newMealPlans = { ...prev.mealPlans }; delete newMealPlans[userToDelete];
                         const newRecipes = { ...prev.recipes };
-                         Object.values(newRecipes).forEach((recipe: Recipe) => {
-                            if(recipe.createdBy === userToDelete) {
+                        Object.values(newRecipes).forEach((recipe: Recipe) => {
+                            if (recipe.createdBy === userToDelete) {
                                 newRecipes[recipe.id] = { ...recipe, createdBy: prev.adminUser || 'Borttagen användare' };
                                 syncToDB('recipes', recipe.id, newRecipes[recipe.id]);
                             }
@@ -163,45 +163,45 @@ export default function App() {
             setModals(prev => ({ ...prev, confirm: true }));
         });
     }, [displayToast, syncToDB]);
-    
+
     const openRenameUserModal = useCallback((oldName: string) => { setUserToRename(oldName); setModals(prev => ({ ...prev, renameUser: true })); }, []);
-    
+
     const handleRenameUser = useCallback((oldName: string, newName: string) => {
-        if (!newName || newName === oldName) { setModals(prev => ({...prev, renameUser: false })); return; }
+        if (!newName || newName === oldName) { setModals(prev => ({ ...prev, renameUser: false })); return; }
         if (appData.users[newName]) { displayToast(`Användarnamnet "${newName}" finns redan.`, 'error'); return; }
 
         const newUsers = { ...appData.users };
         newUsers[newName] = newUsers[oldName]; delete newUsers[oldName];
         syncToDB('users', newName, newUsers[newName]);
         syncToDB('users', oldName, null, true);
-        
+
         const newMealPlans = { ...appData.mealPlans };
-        if (newMealPlans[oldName]) { 
-            newMealPlans[newName] = newMealPlans[oldName]; delete newMealPlans[oldName]; 
+        if (newMealPlans[oldName]) {
+            newMealPlans[newName] = newMealPlans[oldName]; delete newMealPlans[oldName];
             syncToDB('mealPlans', newName, newMealPlans[newName]);
             syncToDB('mealPlans', oldName, null, true);
         }
-        
+
         const newRecipes = { ...appData.recipes };
         Object.values(newRecipes).forEach((recipe: Recipe) => {
-            if(recipe.createdBy === oldName) {
+            if (recipe.createdBy === oldName) {
                 newRecipes[recipe.id] = { ...recipe, createdBy: newName };
                 syncToDB('recipes', recipe.id, newRecipes[recipe.id]);
             }
         });
-        
+
         const newAdmin = appData.adminUser === oldName ? newName : appData.adminUser;
-        if(newAdmin !== appData.adminUser) syncToDB('settings', 'main', { adminUser: newAdmin });
-        
+        if (newAdmin !== appData.adminUser) syncToDB('settings', 'main', { adminUser: newAdmin });
+
         setAppData({ users: newUsers, mealPlans: newMealPlans, recipes: newRecipes, adminUser: newAdmin });
         if (currentUser === oldName) setCurrentUser(newName);
         displayToast(`Användare ändrad till "${newName}".`, 'success');
-        setModals(prev => ({...prev, renameUser: false }));
+        setModals(prev => ({ ...prev, renameUser: false }));
     }, [appData, currentUser, displayToast, syncToDB]);
 
     const handleSaveRecipe = useCallback((recipeData: Omit<Recipe, 'id' | 'createdBy'>, id?: string) => {
         const recipeId = id || `recipe_${Date.now()}`;
-        
+
         setAppData(prev => {
             const newRecipes = { ...prev.recipes };
             const newRecipe = { ...recipeData, id: recipeId, createdBy: id ? newRecipes[recipeId].createdBy : currentUser! };
@@ -211,19 +211,19 @@ export default function App() {
         });
         displayToast('Recept sparat!', 'success');
     }, [currentUser, displayToast, syncToDB]);
-    
+
     const handleAddRecipe = useCallback(() => { setRecipeToEdit(null); setModals(p => ({ ...p, recipeForm: true })); }, []);
     const handleEditRecipe = useCallback((recipe: Recipe) => { setRecipeToEdit(recipe); setModals(p => ({ ...p, recipeForm: true })); }, []);
-    const handleViewRecipe = useCallback((recipe: Recipe) => { setRecipeToView(recipe); setModals(p => ({ ...p, viewRecipe: true})); }, []);
+    const handleViewRecipe = useCallback((recipe: Recipe) => { setRecipeToView(recipe); setModals(p => ({ ...p, viewRecipe: true })); }, []);
     const handleCloseViewRecipe = useCallback(() => { setModals(p => ({ ...p, viewRecipe: false })); setRecipeToView(null); }, []);
-    
+
     const handleDeleteRecipe = useCallback((recipe: Recipe) => {
         setConfirmAction({
             action: () => {
                 setAppData(prev => {
                     const newRecipes = { ...prev.recipes }; delete newRecipes[recipe.id];
                     const newMealPlans = JSON.parse(JSON.stringify(prev.mealPlans)) as typeof prev.mealPlans;
-                    
+
                     Object.keys(newMealPlans).forEach(user => {
                         let userChanged = false;
                         Object.keys(newMealPlans[user]).forEach(week => {
@@ -234,7 +234,7 @@ export default function App() {
                                 }
                             });
                         });
-                        if(userChanged) syncToDB('mealPlans', user, newMealPlans[user]);
+                        if (userChanged) syncToDB('mealPlans', user, newMealPlans[user]);
                     });
                     return { ...prev, recipes: newRecipes, mealPlans: newMealPlans };
                 });
@@ -255,7 +255,7 @@ export default function App() {
             if (!newMealPlans[currentUser][weekId]) newMealPlans[currentUser][weekId] = {};
             if (!newMealPlans[currentUser][weekId][day]) newMealPlans[currentUser][weekId][day] = {};
             newMealPlans[currentUser][weekId][day]['middag'] = recipeId;
-            
+
             syncToDB('mealPlans', currentUser, newMealPlans[currentUser]);
             return { ...prev, mealPlans: newMealPlans };
         });
@@ -263,29 +263,29 @@ export default function App() {
     }, [currentUser, currentDate, displayToast, syncToDB]);
 
     const openTransferRecipesModal = useCallback((fromUser: string) => { setUserToTransferFrom(fromUser); setModals(prev => ({ ...prev, transferRecipes: true })); }, []);
-    
+
     const handleTransferRecipes = useCallback((toUser: string) => {
         if (!userToTransferFrom) return;
         let transferredCount = 0;
-        
+
         setAppData(prev => {
-             const newRecipes = { ...prev.recipes };
-             Object.values(newRecipes).forEach((recipe: Recipe) => {
-                if (recipe.createdBy === userToTransferFrom) { 
-                    newRecipes[recipe.id] = { ...recipe, createdBy: toUser }; 
+            const newRecipes = { ...prev.recipes };
+            Object.values(newRecipes).forEach((recipe: Recipe) => {
+                if (recipe.createdBy === userToTransferFrom) {
+                    newRecipes[recipe.id] = { ...recipe, createdBy: toUser };
                     syncToDB('recipes', recipe.id, newRecipes[recipe.id]);
-                    transferredCount++; 
+                    transferredCount++;
                 }
             });
             displayToast(transferredCount > 0 ? `${transferredCount} recept har överförts från ${userToTransferFrom} till ${toUser}.` : `Inga recept att överföra från ${userToTransferFrom}.`, 'success');
             return { ...prev, recipes: newRecipes };
         });
-        
+
         setModals(prev => ({ ...prev, transferRecipes: false }));
         setUserToTransferFrom(null);
     }, [userToTransferFrom, displayToast, syncToDB]);
-    
-    const handleSaveToFile = useCallback(() => { displayToast('Backup skapad (endast lokalt i demo)', 'success'); setModals(p => ({...p, settings: false}))}, [displayToast]);
+
+    const handleSaveToFile = useCallback(() => { displayToast('Backup skapad (endast lokalt i demo)', 'success'); setModals(p => ({ ...p, settings: false })) }, [displayToast]);
     const handleLoadFromFile = useCallback(() => { displayToast('Filuppladdning kräver full backend-sync för tillfället', 'error') }, [displayToast]);
     const handleImportRecipesFromFile = useCallback(() => { displayToast('Funktionen importera recept behöver justeras för granular sync.', 'error') }, [displayToast]);
 
@@ -301,23 +301,24 @@ export default function App() {
             <>
                 {toastInfo && <Toast message={toastInfo.message} type={toastInfo.type} show={showToast} />}
                 <UserModal isOpen={modals.user} users={appData.users} adminUser={appData.adminUser} onLogin={handleLogin} onCreateUser={handleCreateUser} onSetInitialPassword={handleSetInitialPassword} onDeleteUser={handleDeleteUser} onRenameUser={openRenameUserModal} onTransferRecipes={openTransferRecipesModal} onResetPassword={openResetPasswordModal} wasAdminOnLogout={wasAdminOnLogout} showToast={displayToast} />
-                <RenameUserModal isOpen={modals.renameUser} onClose={() => setModals(p => ({...p, renameUser: false}))} onConfirm={(newName) => handleRenameUser(userToRename!, newName)} username={userToRename || ''} showToast={displayToast} />
-                <ResetPasswordModal isOpen={modals.resetPassword} onClose={() => setModals(p => ({...p, resetPassword: false}))} onConfirm={handleResetPassword} username={userToResetPassword || ''} showToast={displayToast} />
+                <RenameUserModal isOpen={modals.renameUser} onClose={() => setModals(p => ({ ...p, renameUser: false }))} onConfirm={(newName) => handleRenameUser(userToRename!, newName)} username={userToRename || ''} showToast={displayToast} />
+                <ResetPasswordModal isOpen={modals.resetPassword} onClose={() => setModals(p => ({ ...p, resetPassword: false }))} onConfirm={handleResetPassword} username={userToResetPassword || ''} showToast={displayToast} />
                 <TransferRecipesModal isOpen={modals.transferRecipes} onClose={() => { setModals(p => ({ ...p, transferRecipes: false })); setUserToTransferFrom(null); }} onConfirm={handleTransferRecipes} fromUser={userToTransferFrom} allUsers={Object.keys(appData.users)} />
-                <ConfirmModal isOpen={modals.confirm} onClose={() => setModals(p => ({ ...p, confirm: false }))} onConfirm={() => { if(confirmAction) { confirmAction.action(); setConfirmAction(null); } setModals(p=>({...p, confirm: false})); }} title={confirmAction?.title || ""} text={confirmAction?.text || ""} isDanger={confirmAction?.isDanger} confirmText={confirmAction?.confirmText} />
+                <ConfirmModal isOpen={modals.confirm} onClose={() => setModals(p => ({ ...p, confirm: false }))} onConfirm={() => { if (confirmAction) { confirmAction.action(); setConfirmAction(null); } setModals(p => ({ ...p, confirm: false })); }} title={confirmAction?.title || ""} text={confirmAction?.text || ""} isDanger={confirmAction?.isDanger} confirmText={confirmAction?.confirmText} />
             </>
         );
     }
-    
+
     return (
         <div className="container mx-auto p-3 md:p-8 max-w-7xl pb-24 lg:pb-8">
             {toastInfo && <Toast message={toastInfo.message} type={toastInfo.type} show={showToast} />}
             <RecipeFormModal isOpen={modals.recipeForm} onClose={() => setModals(p => ({ ...p, recipeForm: false }))} onSave={handleSaveRecipe} recipeToEdit={recipeToEdit} showToast={displayToast} />
-            <ViewRecipeModal isOpen={modals.viewRecipe} onClose={handleCloseViewRecipe} recipe={recipeToView} showToast={displayToast}/>
-            <SelectRecipeModal isOpen={modals.selectRecipe} onClose={() => setModals(p => ({ ...p, selectRecipe: false }))} recipes={appData.recipes} onSelect={(recipeId) => { handleUpdateMealPlan(targetSlot!.day, recipeId); setModals(p => ({...p, selectRecipe: false})); }} dayName={targetSlot?.dayName || ''} />
+            <FridgeCleanupModal isOpen={modals.fridgeCleanup} onClose={() => setModals(p => ({ ...p, fridgeCleanup: false }))} onSave={(data) => handleSaveRecipe(data, undefined)} showToast={displayToast} />
+            <ViewRecipeModal isOpen={modals.viewRecipe} onClose={handleCloseViewRecipe} recipe={recipeToView} showToast={displayToast} />
+            <SelectRecipeModal isOpen={modals.selectRecipe} onClose={() => setModals(p => ({ ...p, selectRecipe: false }))} recipes={appData.recipes} onSelect={(recipeId) => { handleUpdateMealPlan(targetSlot!.day, recipeId); setModals(p => ({ ...p, selectRecipe: false })); }} dayName={targetSlot?.dayName || ''} />
             <SettingsModal isOpen={modals.settings} onClose={() => setModals(p => ({ ...p, settings: false }))} onSave={handleSaveToFile} onLoad={handleLoadFromFile} onImportRecipes={handleImportRecipesFromFile} />
-            <ConfirmModal isOpen={modals.confirm} onClose={() => setModals(p => ({ ...p, confirm: false }))} onConfirm={() => { if(confirmAction) { confirmAction.action(); setConfirmAction(null); } setModals(p=>({...p, confirm: false})); }} title={confirmAction?.title || ""} text={confirmAction?.text || ""} isDanger={confirmAction?.isDanger} confirmText={confirmAction?.confirmText} />
-            
+            <ConfirmModal isOpen={modals.confirm} onClose={() => setModals(p => ({ ...p, confirm: false }))} onConfirm={() => { if (confirmAction) { confirmAction.action(); setConfirmAction(null); } setModals(p => ({ ...p, confirm: false })); }} title={confirmAction?.title || ""} text={confirmAction?.text || ""} isDanger={confirmAction?.isDanger} confirmText={confirmAction?.confirmText} />
+
             <header className="flex flex-col md:block text-center mb-6 md:mb-10 relative">
                 <h1 className="text-3xl md:text-6xl font-bold bg-clip-text text-transparent bg-gradient-to-br from-sky-600 to-teal-600 pb-1">Matplanerare</h1>
                 <div className="flex md:absolute md:top-0 md:right-0 items-center justify-center space-x-2 mt-2 md:mt-0">
@@ -325,7 +326,7 @@ export default function App() {
                         <span className="font-semibold text-slate-700 text-sm md:text-base">{currentUser}</span>
                         <button onClick={handleSwitchUser} className="p-1.5 text-slate-500 hover:text-sky-600 transition-colors" title="Logga ut"><LogoutIcon /></button>
                     </div>
-                     <button onClick={() => setModals(p => ({ ...p, settings: true }))} className="p-2 bg-white/50 text-slate-500 hover:text-sky-600 border border-slate-200 shadow-sm rounded-full transition-colors" title="Inställningar">
+                    <button onClick={() => setModals(p => ({ ...p, settings: true }))} className="p-2 bg-white/50 text-slate-500 hover:text-sky-600 border border-slate-200 shadow-sm rounded-full transition-colors" title="Inställningar">
                         <SettingsIcon />
                     </button>
                 </div>
@@ -372,7 +373,7 @@ export default function App() {
                             const dayKey = dayName.toLowerCase();
                             const recipeId = currentMealPlan?.[dayKey]?.['middag'];
                             const recipe = recipeId ? appData.recipes[recipeId] : null;
-                            
+
                             // Om 'översikt' är vald visas alla, annars bara den valda fliken
                             const isVisibleOnMobile = activeDayTab === 'översikt' || activeDayTab === dayKey;
 
@@ -380,9 +381,9 @@ export default function App() {
                                 <div key={dayKey} className={`flex-col space-y-2 ${isVisibleOnMobile ? 'flex' : 'hidden md:flex'}`}>
                                     {/* H3 visas alltid på desktop. På mobil visas den bara om vi är i "Översikt"-läget */}
                                     <h3 className={`font-bold text-slate-700 ${activeDayTab === 'översikt' ? 'block text-left pl-1 mt-2' : 'hidden md:block md:text-center'}`}>
-                                        {dayName} <span className="text-sm font-normal text-slate-500">{dayDate.getDate()}/{dayDate.getMonth()+1}</span>
+                                        {dayName} <span className="text-sm font-normal text-slate-500">{dayDate.getDate()}/{dayDate.getMonth() + 1}</span>
                                     </h3>
-                                    <div 
+                                    <div
                                         onClick={() => { if (!recipe) { setTargetSlot({ day: dayKey, dayName: dayName }); setModals(p => ({ ...p, selectRecipe: true })); } }}
                                         onDragOver={(e) => e.preventDefault()}
                                         onDrop={(e) => {
@@ -415,13 +416,13 @@ export default function App() {
 
                 {/* RECEPTBANK: Visas på dator ELLER om 'recipes' är vald på mobil */}
                 <div className={`${activeMobileTab === 'recipes' ? 'block' : 'hidden lg:block'} lg:col-span-1`}>
-                    <RecipeListPanel recipes={appData.recipes} currentUser={currentUser} adminUser={appData.adminUser} onAdd={handleAddRecipe} onEdit={handleEditRecipe} onDelete={handleDeleteRecipe} />
+                    <RecipeListPanel recipes={appData.recipes} currentUser={currentUser} adminUser={appData.adminUser} onAdd={handleAddRecipe} onEdit={handleEditRecipe} onDelete={handleDeleteRecipe} onFridgeCleanup={() => setModals(p => ({ ...p, fridgeCleanup: true }))} />
                 </div>
             </main>
 
             {/* BOTTENMENY: Visas bara på mobil */}
             <nav className="fixed bottom-0 left-0 right-0 bg-white/90 backdrop-blur-lg border-t border-slate-200 lg:hidden z-40 px-6 py-3 flex justify-around items-center shadow-[0_-4px_12px_rgba(0,0,0,0.05)]">
-                <button 
+                <button
                     onClick={() => setActiveMobileTab('plan')}
                     className={`flex flex-col items-center space-y-1 transition-colors ${activeMobileTab === 'plan' ? 'text-sky-600' : 'text-slate-400'}`}
                 >
@@ -430,7 +431,7 @@ export default function App() {
                     </svg>
                     <span className="text-[10px] font-bold uppercase tracking-wider">Veckoplan</span>
                 </button>
-                <button 
+                <button
                     onClick={() => setActiveMobileTab('recipes')}
                     className={`flex flex-col items-center space-y-1 transition-colors ${activeMobileTab === 'recipes' ? 'text-sky-600' : 'text-slate-400'}`}
                 >

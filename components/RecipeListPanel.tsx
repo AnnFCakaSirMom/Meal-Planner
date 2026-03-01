@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import type { Recipe } from '../types';
 import { Button } from './UI';
-import { PlusIcon, EditIcon, DeleteIcon } from './Icons';
+import { PlusIcon, EditIcon, DeleteIcon, SparklesIcon } from './Icons';
 
 export interface RecipeListPanelProps {
     recipes: Record<string, Recipe>;
@@ -10,11 +10,12 @@ export interface RecipeListPanelProps {
     onAdd: () => void;
     onEdit: (recipe: Recipe) => void;
     onDelete: (recipe: Recipe) => void;
+    onFridgeCleanup: () => void;
 }
 
-export const RecipeListPanel: React.FC<RecipeListPanelProps> = ({ recipes, currentUser, adminUser, onAdd, onEdit, onDelete }) => {
+export const RecipeListPanel: React.FC<RecipeListPanelProps> = ({ recipes, currentUser, adminUser, onAdd, onEdit, onDelete, onFridgeCleanup }) => {
     const [searchTerm, setSearchTerm] = useState('');
-    
+
     const filteredRecipes = useMemo(() => {
         const searchIngredients = searchTerm.toLowerCase().split(',').map(s => s.trim()).filter(Boolean);
         return Object.values(recipes)
@@ -30,13 +31,24 @@ export const RecipeListPanel: React.FC<RecipeListPanelProps> = ({ recipes, curre
         <div className="panel p-6 lg:col-span-1">
             <div className="flex justify-between items-center mb-6">
                 <h2 className="text-2xl font-bold text-slate-800">Receptbank</h2>
-                <Button 
-                    onClick={onAdd}
-                    className="p-2 rounded-full"
-                    title="Lägg till nytt recept"
-                >
-                    <PlusIcon />
-                </Button>
+                <div className="flex space-x-2">
+                    <Button
+                        variant="green"
+                        onClick={onFridgeCleanup}
+                        className="px-3 py-2 text-sm whitespace-nowrap"
+                        title="Kylskåpsrensning - Skapa recept från rester"
+                    >
+                        <SparklesIcon />
+                        <span className="hidden sm:inline ml-1">Kylskåpsrensning</span>
+                    </Button>
+                    <Button
+                        onClick={onAdd}
+                        className="p-2 rounded-full"
+                        title="Lägg till nytt recept"
+                    >
+                        <PlusIcon />
+                    </Button>
+                </div>
             </div>
             <div className="mb-4">
                 <label htmlFor="ingredient-search-input" className="sr-only">Sök på ingredienser</label>
@@ -46,9 +58,9 @@ export const RecipeListPanel: React.FC<RecipeListPanelProps> = ({ recipes, curre
                 {filteredRecipes.length > 0 ? filteredRecipes.map((recipe: Recipe) => {
                     const canEdit = recipe.createdBy === currentUser || currentUser === adminUser;
                     return (
-                        <div 
-                            key={recipe.id} 
-                            draggable 
+                        <div
+                            key={recipe.id}
+                            draggable
                             onDragStart={(e) => e.dataTransfer.setData('text/plain', recipe.id)}
                             className="bg-white/60 p-4 rounded-lg shadow-sm flex justify-between items-center border border-slate-200/50 cursor-grab active:cursor-grabbing hover:shadow-md hover:border-sky-300 transition-all"
                         >
