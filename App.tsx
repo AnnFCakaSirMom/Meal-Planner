@@ -422,30 +422,36 @@ export default function App() {
 
     if (isLoading) return <LoadingScreen message="Synkroniserar med molnet..." />;
 
+    const renderUserManagementModals = () => (
+        <>
+            <UserModal
+                isOpen={modals.user}
+                users={appData.users}
+                currentUserRole={currentUser ? (appData.users[currentUser]?.role || 'User') : null}
+                isAdminUserMode={modals.user && currentUser !== null}
+                onLogin={handleLogin}
+                onCreateUser={handleCreateUser}
+                onSetInitialPassword={handleSetInitialPassword}
+                onDeleteUser={handleDeleteUser}
+                onRenameUser={openRenameUserModal}
+                onTransferRecipes={openTransferRecipesModal}
+                onResetPassword={openResetPasswordModal}
+                onChangeRole={handleChangeRole}
+                onClose={currentUser ? () => setModals(prev => ({ ...prev, user: false })) : undefined}
+                showToast={displayToast}
+            />
+            <RenameUserModal isOpen={modals.renameUser} onClose={() => setModals(p => ({ ...p, renameUser: false }))} onConfirm={(newName) => handleRenameUser(userToRename!, newName)} username={userToRename || ''} showToast={displayToast} />
+            <ResetPasswordModal isOpen={modals.resetPassword} onClose={() => setModals(p => ({ ...p, resetPassword: false }))} onConfirm={handleResetPassword} username={userToResetPassword || ''} showToast={displayToast} />
+            <TransferRecipesModal isOpen={modals.transferRecipes} onClose={() => { setModals(p => ({ ...p, transferRecipes: false })); setUserToTransferFrom(null); }} onConfirm={handleTransferRecipes} fromUser={userToTransferFrom} allUsers={Object.keys(appData.users)} />
+            <ConfirmModal isOpen={modals.confirm} onClose={() => setModals(p => ({ ...p, confirm: false }))} onConfirm={() => { if (confirmAction) { confirmAction.action(); setConfirmAction(null); } setModals(p => ({ ...p, confirm: false })); }} title={confirmAction?.title || ""} text={confirmAction?.text || ""} isDanger={confirmAction?.isDanger} confirmText={confirmAction?.confirmText} />
+        </>
+    );
+
     if (!currentUser) {
         return (
             <>
                 {toastInfo && <Toast message={toastInfo.message} type={toastInfo.type} show={showToast} />}
-                <UserModal
-                    isOpen={modals.user}
-                    users={appData.users}
-                    currentUserRole={currentUser ? (appData.users[currentUser]?.role || 'User') : null}
-                    isAdminUserMode={modals.user && currentUser !== null}
-                    onLogin={handleLogin}
-                    onCreateUser={handleCreateUser}
-                    onSetInitialPassword={handleSetInitialPassword}
-                    onDeleteUser={handleDeleteUser}
-                    onRenameUser={openRenameUserModal}
-                    onTransferRecipes={openTransferRecipesModal}
-                    onResetPassword={openResetPasswordModal}
-                    onChangeRole={handleChangeRole}
-                    onClose={currentUser ? () => setModals(prev => ({ ...prev, user: false })) : undefined}
-                    showToast={displayToast}
-                />
-                <RenameUserModal isOpen={modals.renameUser} onClose={() => setModals(p => ({ ...p, renameUser: false }))} onConfirm={(newName) => handleRenameUser(userToRename!, newName)} username={userToRename || ''} showToast={displayToast} />
-                <ResetPasswordModal isOpen={modals.resetPassword} onClose={() => setModals(p => ({ ...p, resetPassword: false }))} onConfirm={handleResetPassword} username={userToResetPassword || ''} showToast={displayToast} />
-                <TransferRecipesModal isOpen={modals.transferRecipes} onClose={() => { setModals(p => ({ ...p, transferRecipes: false })); setUserToTransferFrom(null); }} onConfirm={handleTransferRecipes} fromUser={userToTransferFrom} allUsers={Object.keys(appData.users)} />
-                <ConfirmModal isOpen={modals.confirm} onClose={() => setModals(p => ({ ...p, confirm: false }))} onConfirm={() => { if (confirmAction) { confirmAction.action(); setConfirmAction(null); } setModals(p => ({ ...p, confirm: false })); }} title={confirmAction?.title || ""} text={confirmAction?.text || ""} isDanger={confirmAction?.isDanger} confirmText={confirmAction?.confirmText} />
+                {renderUserManagementModals()}
             </>
         );
     }
@@ -487,7 +493,8 @@ export default function App() {
                     setModals(p => ({ ...p, settings: false, user: true }));
                 } : undefined}
             />
-            <ConfirmModal isOpen={modals.confirm} onClose={() => setModals(p => ({ ...p, confirm: false }))} onConfirm={() => { if (confirmAction) { confirmAction.action(); setConfirmAction(null); } setModals(p => ({ ...p, confirm: false })); }} title={confirmAction?.title || ""} text={confirmAction?.text || ""} isDanger={confirmAction?.isDanger} confirmText={confirmAction?.confirmText} />
+
+            {renderUserManagementModals()}
 
             <header className="flex flex-col md:block text-center mb-6 md:mb-10 relative">
                 <h1 className="text-3xl md:text-6xl font-bold bg-clip-text text-transparent bg-gradient-to-br from-sky-600 to-teal-600 pb-1">Matplanerare</h1>
