@@ -253,7 +253,7 @@ export default function App() {
         if (!currentMealPlan) return [];
         const items: { recipeName: string, items: string[] }[] = [];
 
-        ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'].forEach(day => {
+        ['måndag', 'tisdag', 'onsdag', 'torsdag', 'fredag', 'lördag', 'söndag'].forEach(day => {
             const recipeId = (currentMealPlan as any)[day]?.['middag'];
             if (recipeId) {
                 const recipe = appData.recipes[recipeId];
