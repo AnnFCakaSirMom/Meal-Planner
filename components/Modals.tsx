@@ -29,7 +29,7 @@ export const ConfirmModal: React.FC<ConfirmModalProps> = ({ isOpen, onClose, onC
 export interface UserModalProps {
     isOpen: boolean;
     users: Record<string, User>;
-    adminUser: string | null;
+    currentUserRole: "Owner" | "Admin" | "User" | null;
     onLogin: (user: string, pass: string) => void;
     onCreateUser: (user: string, pass: string) => void;
     onSetInitialPassword: (user: string, pass: string) => void;
@@ -37,10 +37,12 @@ export interface UserModalProps {
     onRenameUser: (user: string) => void;
     onTransferRecipes: (user: string) => void;
     onResetPassword: (user: string) => void;
-    wasAdminOnLogout: boolean;
+    onChangeRole: (user: string, newRole: "Admin" | "User") => void;
+    isAdminUserMode?: boolean; // If opened from Settings
+    onClose?: () => void;
     showToast: (message: string, type?: 'success' | 'error') => void;
 }
-export const UserModal: React.FC<UserModalProps> = ({ isOpen, users, adminUser, onLogin, onCreateUser, onSetInitialPassword, onDeleteUser, onRenameUser, onTransferRecipes, onResetPassword, wasAdminOnLogout, showToast }) => {
+export const UserModal: React.FC<UserModalProps> = ({ isOpen, users, currentUserRole, onLogin, onCreateUser, onSetInitialPassword, onDeleteUser, onRenameUser, onTransferRecipes, onResetPassword, onChangeRole, isAdminUserMode, onClose, showToast }) => {
     const [selectedUser, setSelectedUser] = useState('');
     const [password, setPassword] = useState('');
     const [newUser, setNewUser] = useState('');
@@ -123,22 +125,48 @@ export const UserModal: React.FC<UserModalProps> = ({ isOpen, users, adminUser, 
                 </div>
             </div>
 
-            {wasAdminOnLogout && (
+            {isAdminUserMode && currentUserRole !== 'User' && (
                 <div className="mt-8 pt-6 border-t border-slate-300">
-                    <h4 className="text-lg font-bold text-slate-800 mb-3 text-center">Admin - Hantera Användare</h4>
-                    <div className="space-y-2 max-h-40 overflow-y-auto pr-2">
-                        {userList.map(user => (
-                            <div key={user} className="flex justify-between items-center bg-slate-100/70 p-2 rounded-lg">
-                                <span className="text-slate-800 font-medium">{user}{user === adminUser ? ' (Admin)' : ''}</span>
-                                <div className="flex items-center space-x-1">
-                                    <button onClick={() => onRenameUser(user)} className="text-slate-500 hover:text-sky-600 p-1 rounded-full hover:bg-sky-100/70" title={`Byt namn på ${user}`}><EditIcon /></button>
-                                    {user !== adminUser && <button onClick={() => onResetPassword(user)} className="text-slate-500 hover:text-orange-600 p-1 rounded-full hover:bg-orange-100/70" title={`Återställ lösenord för ${user}`}><KeyIcon /></button>}
-                                    {user !== adminUser && <button onClick={() => onTransferRecipes(user)} className="text-slate-500 hover:text-green-600 p-1 rounded-full hover:bg-green-100/70" title={`Överför recept från ${user}`}><TransferIcon /></button>}
-                                    {user !== adminUser && <button onClick={() => onDeleteUser(user)} className="text-red-500 hover:text-red-700 p-1 rounded-full hover:bg-red-100/70" title={`Ta bort ${user}`}><DeleteIcon /></button>}
+                    <h4 className="text-lg font-bold text-slate-800 mb-3 text-center">Hantera Användare</h4>
+                    <div className="space-y-2 max-h-64 overflow-y-auto pr-2">
+                        {userList.map(user => {
+                            const userRole = users[user]?.role || 'User';
+                            const isOwner = userRole === 'Owner';
+                            const isAdmin = userRole === 'Admin';
+                            const isMe = user === selectedUser; // Actually we don't have the current user's name easily here except it's not strictly 'selectedUser'. We might need to block based on roles.
+
+                            // Owner can do everything. Admin can't touch Owner.
+                            const canEdit = currentUserRole === 'Owner' || !isOwner;
+                            const canDelete = currentUserRole === 'Owner' || (!isOwner && !isAdmin);
+
+                            return (
+                                <div key={user} className="flex justify-between items-center bg-slate-100/70 p-2 rounded-lg">
+                                    <div className="flex flex-col">
+                                        <span className="text-slate-800 font-medium">{user}</span>
+                                        <span className="text-xs text-slate-500 font-bold uppercase">{userRole}</span>
+                                    </div>
+                                    <div className="flex items-center space-x-1">
+                                        {currentUserRole === 'Owner' && !isOwner && !isAdmin && (
+                                            <button onClick={() => onChangeRole(user, 'Admin')} className="text-sky-600 hover:text-sky-800 p-1 text-xs font-bold px-2 rounded-full hover:bg-sky-100/70 transition-colors">Gör till Admin</button>
+                                        )}
+                                        {currentUserRole === 'Owner' && isAdmin && (
+                                            <button onClick={() => onChangeRole(user, 'User')} className="text-orange-600 hover:text-orange-800 p-1 text-xs font-bold px-2 rounded-full hover:bg-orange-100/70 transition-colors">Ta bort Admin</button>
+                                        )}
+
+                                        {canEdit && <button onClick={() => onRenameUser(user)} className="text-slate-500 hover:text-sky-600 p-1 rounded-full hover:bg-sky-100/70 transition-colors" title={`Byt namn på ${user}`}><EditIcon /></button>}
+                                        {canEdit && <button onClick={() => onResetPassword(user)} className="text-slate-500 hover:text-orange-600 p-1 rounded-full hover:bg-orange-100/70 transition-colors" title={`Återställ lösenord för ${user}`}><KeyIcon /></button>}
+                                        {canEdit && <button onClick={() => onTransferRecipes(user)} className="text-slate-500 hover:text-green-600 p-1 rounded-full hover:bg-green-100/70 transition-colors" title={`Överför recept från ${user}`}><TransferIcon /></button>}
+                                        {canDelete && <button onClick={() => onDeleteUser(user)} className="text-red-500 hover:text-red-700 p-1 rounded-full hover:bg-red-100/70 transition-colors" title={`Ta bort ${user}`}><DeleteIcon /></button>}
+                                    </div>
                                 </div>
-                            </div>
-                        ))}
+                            );
+                        })}
                     </div>
+                    {onClose && (
+                        <div className="mt-6 flex justify-center">
+                            <Button variant="secondary" onClick={onClose}>Stäng</Button>
+                        </div>
+                    )}
                 </div>
             )}
         </Modal>
@@ -535,8 +563,9 @@ export interface SettingsModalProps {
     onSave: () => void;
     onLoad: () => void;
     onImportRecipes: () => void;
+    onManageUsers?: () => void;
 }
-export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, onSave, onLoad, onImportRecipes }) => {
+export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, onSave, onLoad, onImportRecipes, onManageUsers }) => {
     return (
         <Modal isOpen={isOpen} onClose={onClose} size="lg">
             <h3 className="text-2xl font-bold mb-2 text-slate-800">Datahantering & Backup</h3>
@@ -555,6 +584,13 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, o
                     <p className="text-xs text-slate-500 mb-3">Lägg till recept från en backup-fil till din nuvarande receptbank. Detta påverkar inte användare eller matplaner och skriver inte över existerande recept.</p>
                     <Button variant="secondary" onClick={onImportRecipes} className="w-full">Importera recept från fil...</Button>
                 </div>
+                {onManageUsers && (
+                    <div>
+                        <h4 className="text-md font-semibold text-slate-700 mb-2">Administrera Användare</h4>
+                        <p className="text-xs text-slate-500 mb-3">Här kan du byta namn, ändra lösenord, rulla ut nya admins eller ta bort användare i appen.</p>
+                        <Button variant="secondary" onClick={onManageUsers} className="w-full border-sky-300 text-sky-700 hover:bg-sky-50">Hantera Användare...</Button>
+                    </div>
+                )}
             </div>
             <div className="flex justify-end mt-8">
                 <Button variant="secondary" onClick={onClose}>Stäng</Button>

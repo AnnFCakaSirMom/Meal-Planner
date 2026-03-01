@@ -26,7 +26,6 @@ export default function App() {
     const [isLoading, setIsLoading] = useState(true);
     const [appData, setAppData] = useState<AppData>(initialAppData);
     const [currentUser, setCurrentUser] = useState<string | null>(null);
-    const [wasAdminOnLogout, setWasAdminOnLogout] = useState(false);
     const [currentDate, setCurrentDate] = useState(new Date());
     const isInitialized = useRef(false);
 
@@ -64,26 +63,37 @@ export default function App() {
     // Växlar mellan huvudvyer på mobil (plan eller recipes)
     const [activeMobileTab, setActiveMobileTab] = useState<'plan' | 'recipes'>('plan');
 
+    // Hämta session och data vid start
     useEffect(() => {
-        const loadDataFromServer = async () => {
+        const loadInitialData = async () => {
             try {
-                const response = await fetch('/api/get-app-data');
-                if (!response.ok) throw new Error('Network response was not ok');
-                const data = await response.json();
-                if (data && typeof data === 'object' && !Array.isArray(data)) {
-                    setAppData({ ...initialAppData, ...data } as AppData);
-                } else {
-                    setAppData(initialAppData);
+                // 1. Kolla om vi är inloggade via kakan
+                const sessionRes = await fetch('/api/me');
+                if (sessionRes.ok) {
+                    const sessionData = await sessionRes.json();
+                    if (sessionData.isAuthenticated) {
+                        setCurrentUser(sessionData.user.username);
+                        setModals(prev => ({ ...prev, user: false }));
+
+                        // 2. Om inloggad, hämta app-datan
+                        const dataRes = await fetch('/api/get-app-data');
+                        if (dataRes.ok) {
+                            const data = await dataRes.json();
+                            setAppData({ ...initialAppData, ...data } as AppData);
+                        } else {
+                            displayToast('Kunde inte ladda app-data.', 'error');
+                        }
+                    }
                 }
             } catch (error) {
-                displayToast('Kunde inte ladda data från servern.', 'error');
-                setAppData(initialAppData);
+                console.error("Fel vid uppstart:", error);
             } finally {
                 setIsLoading(false);
                 isInitialized.current = true;
             }
         };
-        loadDataFromServer();
+
+        loadInitialData();
     }, []);
 
     const syncToDB = useCallback(async (collectionName: string, docId: string, data: any, isDelete = false) => {
@@ -110,36 +120,72 @@ export default function App() {
         }
     }, [toastInfo]);
 
-    const handleLogin = useCallback(async (username: string, pass: string) => {
-        const user = appData.users[username];
-        if (!user) { displayToast('Användare hittades inte.', 'error'); return; }
-        const passHash = await hashPassword(pass);
-        if (passHash === user.passwordHash) {
-            setCurrentUser(username);
-            setModals(prev => ({ ...prev, user: false }));
-        } else {
-            displayToast('Fel lösenord.', 'error');
+    // Ladda om all data från servern (används efter login/registrering)
+    const refreshAppData = useCallback(async () => {
+        try {
+            const dataRes = await fetch('/api/get-app-data');
+            if (dataRes.ok) {
+                const data = await dataRes.json();
+                setAppData({ ...initialAppData, ...data } as AppData);
+            }
+        } catch (error) {
+            console.error("Fel vid uppdatering av app-data:", error);
         }
-    }, [appData.users, displayToast]);
+    }, []);
+
+    const handleLogin = useCallback(async (username: string, pass: string) => {
+        try {
+            const passHash = await hashPassword(pass);
+            const res = await fetch('/api/login', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ username, passwordHash: passHash })
+            });
+
+            if (res.ok) {
+                const data = await res.json();
+                setCurrentUser(data.user.username);
+                setModals(prev => ({ ...prev, user: false }));
+                await refreshAppData();
+            } else {
+                displayToast('Fel användarnamn eller lösenord.', 'error');
+            }
+        } catch (error) {
+            displayToast('Ett fel uppstod vid inloggning.', 'error');
+        }
+    }, [displayToast, refreshAppData]);
 
     const handleCreateUser = useCallback(async (username: string, pass: string) => {
-        const passHash = await hashPassword(pass);
-        const userData = { passwordHash: passHash };
-        setAppData(prev => {
-            const newAdmin = prev.adminUser === null ? username : prev.adminUser;
-            if (prev.adminUser === null) syncToDB('settings', 'main', { adminUser: username });
-            return { ...prev, users: { ...prev.users, [username]: userData }, adminUser: newAdmin };
-        });
-        syncToDB('users', username, userData);
-        setCurrentUser(username);
-        setModals(prev => ({ ...prev, user: false }));
-    }, [syncToDB]);
+        try {
+            const passHash = await hashPassword(pass);
+            const res = await fetch('/api/register', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ username, passwordHash: passHash })
+            });
+
+            if (res.ok) {
+                const data = await res.json();
+                setCurrentUser(data.user.username);
+                setModals(prev => ({ ...prev, user: false }));
+                await refreshAppData();
+                displayToast('Konto skapat!', 'success');
+            } else {
+                const errData = await res.json();
+                displayToast(errData.error || 'Kunde inte skapa konto.', 'error');
+            }
+        } catch (error) {
+            displayToast('Ett fel uppstod vid registrering.', 'error');
+        }
+    }, [displayToast, refreshAppData]);
 
     const handleSetInitialPassword = useCallback(async (username: string, pass: string) => {
+        // I det nya systemet hanterar /api/register även om man sätter lösenord 
+        // för första gången, men eftersom "användaren" måste skapas logiskt
+        // så faller vi tillbaka på handleCreateUser om de inte finns i databasen.
+        // Om de *finns* (skapad av admin men saknar lösenord) uppdaterar vi via update-doc.
         const passHash = await hashPassword(pass);
-        const userData = { passwordHash: passHash };
-        setAppData(prev => ({ ...prev, users: { ...prev.users, [username]: userData } }));
-        syncToDB('users', username, userData);
+        syncToDB('users', username, { passwordHash: passHash });
         displayToast('Lösenord sparat!', 'success');
         await handleLogin(username, pass);
     }, [displayToast, handleLogin, syncToDB]);
@@ -157,9 +203,13 @@ export default function App() {
 
     const openResetPasswordModal = useCallback((user: string) => { setUserToResetPassword(user); setModals(p => ({ ...p, resetPassword: true })); }, []);
 
-    const handleSwitchUser = useCallback(() => {
-        setWasAdminOnLogout(currentUser === appData.adminUser);
+    const handleSwitchUser = useCallback(async () => {
+        try {
+            await fetch('/api/logout', { method: 'POST' });
+        } catch (e) { console.error('Kunde inte logga ut', e); }
+
         setCurrentUser(null);
+        setAppData(initialAppData); // Rensa data ur minnet
         setModals(prev => ({ ...prev, user: true }));
     }, [currentUser, appData.adminUser]);
 
@@ -191,6 +241,19 @@ export default function App() {
     }, [displayToast, syncToDB]);
 
     const openRenameUserModal = useCallback((oldName: string) => { setUserToRename(oldName); setModals(prev => ({ ...prev, renameUser: true })); }, []);
+
+    const handleChangeRole = useCallback((username: string, newRole: "Admin" | "User") => {
+        syncToDB('users', username, { role: newRole });
+        setAppData(prev => ({
+            ...prev,
+            users: {
+                ...prev.users,
+                [username]: { ...prev.users[username], role: newRole }
+            }
+        }));
+        displayToast(`${username} är nu ${newRole}.`, 'success');
+    }, [syncToDB, displayToast]);
+
 
     const handleRenameUser = useCallback((oldName: string, newName: string) => {
         if (!newName || newName === oldName) { setModals(prev => ({ ...prev, renameUser: false })); return; }
@@ -363,7 +426,22 @@ export default function App() {
         return (
             <>
                 {toastInfo && <Toast message={toastInfo.message} type={toastInfo.type} show={showToast} />}
-                <UserModal isOpen={modals.user} users={appData.users} adminUser={appData.adminUser} onLogin={handleLogin} onCreateUser={handleCreateUser} onSetInitialPassword={handleSetInitialPassword} onDeleteUser={handleDeleteUser} onRenameUser={openRenameUserModal} onTransferRecipes={openTransferRecipesModal} onResetPassword={openResetPasswordModal} wasAdminOnLogout={wasAdminOnLogout} showToast={displayToast} />
+                <UserModal
+                    isOpen={modals.user}
+                    users={appData.users}
+                    currentUserRole={currentUser ? (appData.users[currentUser]?.role || 'User') : null}
+                    isAdminUserMode={modals.user && currentUser !== null}
+                    onLogin={handleLogin}
+                    onCreateUser={handleCreateUser}
+                    onSetInitialPassword={handleSetInitialPassword}
+                    onDeleteUser={handleDeleteUser}
+                    onRenameUser={openRenameUserModal}
+                    onTransferRecipes={openTransferRecipesModal}
+                    onResetPassword={openResetPasswordModal}
+                    onChangeRole={handleChangeRole}
+                    onClose={currentUser ? () => setModals(prev => ({ ...prev, user: false })) : undefined}
+                    showToast={displayToast}
+                />
                 <RenameUserModal isOpen={modals.renameUser} onClose={() => setModals(p => ({ ...p, renameUser: false }))} onConfirm={(newName) => handleRenameUser(userToRename!, newName)} username={userToRename || ''} showToast={displayToast} />
                 <ResetPasswordModal isOpen={modals.resetPassword} onClose={() => setModals(p => ({ ...p, resetPassword: false }))} onConfirm={handleResetPassword} username={userToResetPassword || ''} showToast={displayToast} />
                 <TransferRecipesModal isOpen={modals.transferRecipes} onClose={() => { setModals(p => ({ ...p, transferRecipes: false })); setUserToTransferFrom(null); }} onConfirm={handleTransferRecipes} fromUser={userToTransferFrom} allUsers={Object.keys(appData.users)} />

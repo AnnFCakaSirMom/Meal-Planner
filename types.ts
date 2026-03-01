@@ -1,6 +1,7 @@
 
 export interface User {
   passwordHash: string;
+  role?: "Owner" | "Admin" | "User";
 }
 
 export interface Recipe {
