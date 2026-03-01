@@ -74,16 +74,16 @@ export default function App() {
                     if (sessionData.isAuthenticated) {
                         setCurrentUser(sessionData.user.username);
                         setModals(prev => ({ ...prev, user: false }));
-
-                        // 2. Om inloggad, hämta app-datan
-                        const dataRes = await fetch('/api/get-app-data');
-                        if (dataRes.ok) {
-                            const data = await dataRes.json();
-                            setAppData({ ...initialAppData, ...data } as AppData);
-                        } else {
-                            displayToast('Kunde inte ladda app-data.', 'error');
-                        }
                     }
+                }
+
+                // 2. Hämta app-datan (returnerar alltid användarlistan)
+                const dataRes = await fetch('/api/get-app-data');
+                if (dataRes.ok) {
+                    const data = await dataRes.json();
+                    setAppData({ ...initialAppData, ...data } as AppData);
+                } else {
+                    displayToast('Kunde inte ladda app-data.', 'error');
                 }
             } catch (error) {
                 console.error("Fel vid uppstart:", error);
