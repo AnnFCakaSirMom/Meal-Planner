@@ -4,31 +4,42 @@ import { parse } from 'cookie';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   try {
-    // 1. Authenticate user
+    // 1. Check Authentication
     const cookies = parse(req.headers.cookie || '');
     const sessionToken = cookies.session_token;
 
-    if (!sessionToken) {
-      return res.status(401).json({ error: 'Unauthorized' });
+    let isAuthenticated = false;
+    let requesterUsername = '';
+    let requesterRole = 'User';
+
+    if (sessionToken) {
+      requesterUsername = sessionToken;
+      const requesterDoc = await db.collection('users').doc(requesterUsername).get();
+      if (requesterDoc.exists) {
+        isAuthenticated = true;
+        const requesterData = requesterDoc.data() as any;
+        requesterRole = requesterData.role || 'User';
+      }
     }
-
-    const requesterUsername = sessionToken;
-    const requesterDoc = await db.collection('users').doc(requesterUsername).get();
-
-    if (!requesterDoc.exists) {
-      return res.status(401).json({ error: 'Unauthorized' });
-    }
-
-    const requesterData = requesterDoc.data() as any;
-    const requesterRole = requesterData.role || 'User';
 
     // 2. Fetch data
-    const [usersSnap, recipesSnap, mealPlansSnap, settingsSnap] = await Promise.all([
+    // We ALWAYS fetch users and settings so the login dropdown works.
+    // We only fetch recipes and mealPlans if authenticated.
+    const promises: Promise<any>[] = [
       db.collection('users').get(),
-      db.collection('recipes').get(),
-      db.collection('mealPlans').get(),
       db.collection('settings').doc('main').get()
-    ]);
+    ];
+
+    if (isAuthenticated) {
+      promises.push(db.collection('recipes').get());
+      promises.push(db.collection('mealPlans').get());
+    }
+
+    const results = await Promise.all(promises);
+    const usersSnap = results[0];
+    const settingsSnap = results[1];
+    const recipesSnap = isAuthenticated ? results[2] : null;
+    const mealPlansSnap = isAuthenticated ? results[3] : null;
 
     const appData = {
       users: {} as any,
@@ -37,24 +48,28 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       adminUser: settingsSnap.exists ? settingsSnap.data()?.adminUser || null : null
     };
 
-    // 3. Filter data based on role
-    usersSnap.forEach(doc => {
+    // 3. Filter data
+    usersSnap.forEach((doc: any) => {
       // NEVER send passwordHash to the client
       const data = doc.data();
       appData.users[doc.id] = { role: data.role || 'User' };
     });
 
-    recipesSnap.forEach(doc => {
-      appData.recipes[doc.id] = doc.data();
-    });
+    if (isAuthenticated && recipesSnap) {
+      recipesSnap.forEach((doc: any) => {
+        appData.recipes[doc.id] = doc.data();
+      });
+    }
 
-    mealPlansSnap.forEach(doc => {
-      // Users can only see their own meal plan.
-      // Admins and Owners can see everyone's (needed for transfer functions etc).
-      if (requesterRole === 'Owner' || requesterRole === 'Admin' || doc.id === requesterUsername) {
-        appData.mealPlans[doc.id] = doc.data();
-      }
-    });
+    if (isAuthenticated && mealPlansSnap) {
+      mealPlansSnap.forEach((doc: any) => {
+        // Users can only see their own meal plan.
+        // Admins and Owners can see everyone's.
+        if (requesterRole === 'Owner' || requesterRole === 'Admin' || doc.id === requesterUsername) {
+          appData.mealPlans[doc.id] = doc.data();
+        }
+      });
+    }
 
     res.status(200).json(appData);
   } catch (error) {
