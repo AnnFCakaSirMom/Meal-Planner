@@ -1,7 +1,7 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import type { AppData, Recipe } from './types';
 import { hashPassword, getWeekId, getWeekStartDate } from './utils/helpers';
-import { LogoutIcon, SettingsIcon, PrevIcon, NextIcon } from './components/Icons';
+import { LogoutIcon, SettingsIcon, PrevIcon, NextIcon, ShoppingCartIcon } from './components/Icons';
 import { Toast, LoadingScreen } from './components/UI';
 import {
     ConfirmModal,
@@ -14,7 +14,8 @@ import {
     SelectRecipeModal,
     SettingsModal,
     FridgeCleanupModal,
-    CookingModeModal
+    CookingModeModal,
+    ShoppingListModal
 } from './components/Modals';
 import { useWakeLock } from './utils/useWakeLock';
 import { RecipeListPanel } from './components/RecipeListPanel';
@@ -43,7 +44,8 @@ export default function App() {
         resetPassword: false,
         transferRecipes: false,
         fridgeCleanup: false,
-        cookingMode: false
+        cookingMode: false,
+        shoppingList: false
     });
     const [editingRecipe, setEditingRecipe] = useState<Recipe | null>(null);
     const [viewingRecipe, setViewingRecipe] = useState<Recipe | null>(null);
@@ -244,6 +246,28 @@ export default function App() {
         requestWakeLock();
     };
 
+    const shoppingListItems = useMemo(() => {
+        const weekId = getWeekId(currentDate);
+        if (!currentUser) return [];
+        const currentMealPlan = appData.mealPlans[currentUser]?.[weekId];
+        if (!currentMealPlan) return [];
+        const items: { recipeName: string, items: string[] }[] = [];
+
+        ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'].forEach(day => {
+            const recipeId = (currentMealPlan as any)[day];
+            if (recipeId) {
+                const recipe = appData.recipes[recipeId];
+                if (recipe && recipe.ingredients) {
+                    const ingList = recipe.ingredients.split('\n').map((i: string) => i.trim()).filter((i: string) => i !== '');
+                    if (ingList.length > 0) {
+                        items.push({ recipeName: recipe.name, items: ingList });
+                    }
+                }
+            }
+        });
+        return items;
+    }, [appData.mealPlans, appData.recipes, currentDate, currentUser]);
+
     const handleStopCooking = () => {
         setModals(p => ({ ...p, cookingMode: false }));
         setActiveCookingRecipe(null);
@@ -367,6 +391,13 @@ export default function App() {
                 recipe={activeCookingRecipe}
             />
 
+            <ShoppingListModal
+                isOpen={modals.shoppingList}
+                onClose={() => setModals(p => ({ ...p, shoppingList: false }))}
+                shoppingListItems={shoppingListItems}
+                showToast={displayToast}
+            />
+
             <SelectRecipeModal isOpen={modals.selectRecipe} onClose={() => setModals(p => ({ ...p, selectRecipe: false }))} recipes={appData.recipes} onSelect={(recipeId) => { handleUpdateMealPlan(targetSlot!.day, recipeId); setModals(p => ({ ...p, selectRecipe: false })); }} dayName={targetSlot?.dayName || ''} />
             <SettingsModal isOpen={modals.settings} onClose={() => setModals(p => ({ ...p, settings: false }))} onSave={handleSaveToFile} onLoad={handleLoadFromFile} onImportRecipes={handleImportRecipesFromFile} />
             <ConfirmModal isOpen={modals.confirm} onClose={() => setModals(p => ({ ...p, confirm: false }))} onConfirm={() => { if (confirmAction) { confirmAction.action(); setConfirmAction(null); } setModals(p => ({ ...p, confirm: false })); }} title={confirmAction?.title || ""} text={confirmAction?.text || ""} isDanger={confirmAction?.isDanger} confirmText={confirmAction?.confirmText} />
@@ -387,12 +418,22 @@ export default function App() {
             <main className="grid grid-cols-1 lg:grid-cols-4 gap-6 md:gap-8">
                 {/* VECKOPLAN: Visas på dator ELLER om 'plan' är vald på mobil */}
                 <div className={`panel p-3 md:p-6 lg:col-span-3 ${activeMobileTab === 'plan' ? 'block' : 'hidden lg:block'}`}>
-                    <div className="flex justify-between items-center mb-4 md:mb-6">
+                    <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 md:mb-6 space-y-3 sm:space-y-0">
                         <h2 className="text-lg md:text-2xl font-bold text-slate-800">Veckoplan</h2>
-                        <div className="flex items-center space-x-1 md:space-x-2">
-                            <button onClick={() => setCurrentDate(d => new Date(d.setDate(d.getDate() - 7)))} className="p-2 rounded-full hover:bg-black/5 transition-colors text-slate-500"><PrevIcon /></button>
-                            <span className="text-sm md:text-lg font-bold w-20 md:w-32 text-center text-slate-700">V {weekId.split('-W')[1]}</span>
-                            <button onClick={() => setCurrentDate(d => new Date(d.setDate(d.getDate() + 7)))} className="p-2 rounded-full hover:bg-black/5 transition-colors text-slate-500"><NextIcon /></button>
+                        <div className="flex items-center space-x-2">
+                            <button
+                                onClick={() => setModals(p => ({ ...p, shoppingList: true }))}
+                                className="flex items-center space-x-1.5 bg-emerald-500 hover:bg-emerald-600 text-white px-3 md:px-4 py-1.5 md:py-2 rounded-xl shadow-sm transition-all text-sm md:text-base font-medium mr-2"
+                                title="Öppna Inköpslista"
+                            >
+                                <ShoppingCartIcon />
+                                <span className="hidden sm:inline">Inköpslista</span>
+                            </button>
+                            <div className="flex items-center space-x-1 bg-slate-100 rounded-full p-1">
+                                <button onClick={() => setCurrentDate(d => new Date(d.setDate(d.getDate() - 7)))} className="p-1 md:p-2 rounded-full hover:bg-white shadow-sm transition-colors text-slate-500"><PrevIcon /></button>
+                                <span className="text-sm md:text-base font-bold w-16 md:w-20 text-center text-slate-700">V {weekId.split('-W')[1]}</span>
+                                <button onClick={() => setCurrentDate(d => new Date(d.setDate(d.getDate() + 7)))} className="p-1 md:p-2 rounded-full hover:bg-white shadow-sm transition-colors text-slate-500"><NextIcon /></button>
+                            </div>
                         </div>
                     </div>
 

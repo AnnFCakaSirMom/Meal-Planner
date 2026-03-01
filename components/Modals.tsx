@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import type { Recipe, User } from '../types';
 import { Button, Modal } from './UI';
-import { EditIcon, DeleteIcon, KeyIcon, TransferIcon, CopyIcon, SparklesIcon, RandomIcon, ChefHatIcon, XMarkIcon } from './Icons';
+import { EditIcon, DeleteIcon, KeyIcon, TransferIcon, CopyIcon, SparklesIcon, RandomIcon, ChefHatIcon, XMarkIcon, ShoppingCartIcon } from './Icons';
 import { generateRecipe } from '../services/geminiService';
 
 export interface ConfirmModalProps {
@@ -792,5 +792,106 @@ export const CookingModeModal: React.FC<CookingModeModalProps> = ({ isOpen, onCl
                 </Button>
             </div>
         </div>
+    );
+};
+
+export interface ShoppingListModalProps {
+    isOpen: boolean;
+    onClose: () => void;
+    shoppingListItems: { recipeName: string, items: string[] }[];
+    showToast: (message: string, type?: 'success' | 'error') => void;
+}
+
+export function ShoppingListModal({ isOpen, onClose, shoppingListItems, showToast }: ShoppingListModalProps) {
+    const [checkedItems, setCheckedItems] = useState<Record<string, boolean>>({});
+    const [copyText, setCopyText] = useState('Kopiera Inköpslista');
+
+    useEffect(() => {
+        if (isOpen) {
+            setCheckedItems({});
+            setCopyText('Kopiera Inköpslista');
+        }
+    }, [isOpen]);
+
+    const handleToggleItem = (key: string) => {
+        setCheckedItems(prev => ({ ...prev, [key]: !prev[key] }));
+    };
+
+    const handleCopyList = () => {
+        let text = "INKÖPSLISTA\n===========\n\n";
+        shoppingListItems.forEach(group => {
+            text += `${group.recipeName.toUpperCase()}:\n`;
+            group.items.forEach(item => text += `- ${item}\n`);
+            text += "\n";
+        });
+
+        navigator.clipboard.writeText(text).then(() => {
+            setCopyText('Kopierat!');
+            setTimeout(() => setCopyText('Kopiera Inköpslista'), 2000);
+            showToast('Kunde kopiera listan.', 'success');
+        }).catch(() => {
+            showToast('Kunde inte kopiera listan.', 'error');
+        });
+    };
+
+    const hasItems = shoppingListItems.some(group => group.items.length > 0);
+
+    return (
+        <Modal isOpen={isOpen} onClose={onClose} size="lg">
+            <div className="flex items-center space-x-2 mb-6">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-shopping-cart">
+                    <circle cx="8" cy="21" r="1" />
+                    <circle cx="19" cy="21" r="1" />
+                    <path d="M2.05 2.05h2l2.66 12.42a2 2 0 0 0 2 1.58h9.78a2 2 0 0 0 1.95-1.57l1.65-7.43H5.12" />
+                </svg>
+                <h3 className="text-2xl font-bold text-slate-800">Inköpslista</h3>
+            </div>
+
+            <div className="max-h-[60vh] overflow-y-auto pr-2 mb-6">
+                {!hasItems ? (
+                    <div className="flex flex-col items-center justify-center p-8 text-slate-500">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-shopping-cart">
+                            <circle cx="8" cy="21" r="1" />
+                            <circle cx="19" cy="21" r="1" />
+                            <path d="M2.05 2.05h2l2.66 12.42a2 2 0 0 0 2 1.58h9.78a2 2 0 0 0 1.95-1.57l1.65-7.43H5.12" />
+                        </svg>
+                        <p className="mt-4 text-center">Inköpslistan är tom. Lägg till recept i din veckoplan för att generera en lista!</p>
+                    </div>
+                ) : (
+                    <div className="space-y-6">
+                        {shoppingListItems.map((group, groupIdx) => {
+                            if (group.items.length === 0) return null;
+                            return (
+                                <div key={groupIdx} className="bg-slate-50 p-4 rounded-xl border border-slate-200 shadow-sm">
+                                    <h4 className="font-bold text-slate-800 mb-3 border-b border-slate-200 pb-1">{group.recipeName}</h4>
+                                    <ul className="space-y-2">
+                                        {group.items.map((item, itemIdx) => {
+                                            const itemKey = `${groupIdx}-${itemIdx}`;
+                                            const isChecked = checkedItems[itemKey];
+                                            return (
+                                                <li key={itemIdx} className="flex items-center space-x-3 cursor-pointer" onClick={() => handleToggleItem(itemKey)}>
+                                                    <div className={`w-5 h-5 rounded border flex items-center justify-center flex-shrink-0 transition-colors ${isChecked ? 'bg-sky-500 border-sky-500 text-white' : 'bg-white border-slate-300'}`}>
+                                                        {isChecked && <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>}
+                                                    </div>
+                                                    <span className={`text-slate-700 flex-1 leading-snug transition-all ${isChecked ? 'line-through opacity-50' : ''}`}>{item}</span>
+                                                </li>
+                                            );
+                                        })}
+                                    </ul>
+                                </div>
+                            );
+                        })}
+                    </div>
+                )}
+            </div>
+
+            <div className="flex justify-between items-center bg-slate-50/50 -mx-6 -mb-6 p-6 md:-mx-8 md:-mb-8 md:p-8 rounded-b-3xl border-t border-slate-200/50">
+                <Button variant="secondary" onClick={onClose}>Stäng</Button>
+                <Button variant="primary" onClick={handleCopyList} className="flex items-center space-x-2">
+                    <CopyIcon />
+                    <span>{copyText}</span>
+                </Button>
+            </div>
+        </Modal>
     );
 };
