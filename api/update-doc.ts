@@ -24,7 +24,17 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
 
     const requesterData = requesterDoc.data() as any;
-    const requesterRole = requesterData.role || 'User';
+    let requesterRole = requesterData.role || 'User';
+
+    // Fallback: If this is the legacy adminUser and they haven't been migrated to 'Owner' role yet
+    if (!requesterData.role) {
+      const settingsDoc = await db.collection('settings').doc('main').get();
+      if (settingsDoc.exists && settingsDoc.data()?.adminUser === requesterUsername) {
+        requesterRole = 'Owner';
+        // Auto-migrate them to Owner in the DB to avoid looking this up every time
+        await db.collection('users').doc(requesterUsername).set({ role: 'Owner' }, { merge: true });
+      }
+    }
 
     const { collectionName, docId, data, isDelete } = req.body;
 

@@ -41,18 +41,25 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const recipesSnap = isAuthenticated ? results[2] : null;
     const mealPlansSnap = isAuthenticated ? results[3] : null;
 
+    const adminUser = settingsSnap.exists ? settingsSnap.data()?.adminUser || null : null;
+
     const appData = {
       users: {} as any,
       recipes: {} as any,
       mealPlans: {} as any,
-      adminUser: settingsSnap.exists ? settingsSnap.data()?.adminUser || null : null
+      adminUser
     };
 
     // 3. Filter data
     usersSnap.forEach((doc: any) => {
       // NEVER send passwordHash to the client
       const data = doc.data();
-      appData.users[doc.id] = { role: data.role || 'User' };
+      let role = data.role || 'User';
+      // Fallback: If this is an old DB where adminUser was stored in settings but never migrated to 'Owner' role
+      if (doc.id === adminUser && !data.role) {
+        role = 'Owner';
+      }
+      appData.users[doc.id] = { role };
     });
 
     if (isAuthenticated && recipesSnap) {

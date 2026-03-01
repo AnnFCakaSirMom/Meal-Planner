@@ -21,6 +21,18 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         }
 
         const userData = userDoc.data() as any;
+        let role = userData.role;
+
+        // Fallback for legacy admin
+        if (!role) {
+            const settingsDoc = await db.collection('settings').doc('main').get();
+            if (settingsDoc.exists && settingsDoc.data()?.adminUser === username) {
+                role = 'Owner';
+                await userDoc.ref.set({ role: 'Owner' }, { merge: true });
+            } else {
+                role = 'User';
+            }
+        }
 
         // Note: For simplicity and ease of migration, the frontend still calculates the SHA-256 hash
         // and sends it to the server. For a full production app, you would send the plain text password
@@ -46,7 +58,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             success: true,
             user: {
                 username,
-                role: userData.role || 'User'
+                role
             }
         });
 

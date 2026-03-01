@@ -28,12 +28,24 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         }
 
         const userData = userDoc.data() as any;
+        let role = userData.role;
+
+        // Fallback for legacy admin
+        if (!role) {
+            const settingsDoc = await db.collection('settings').doc('main').get();
+            if (settingsDoc.exists && settingsDoc.data()?.adminUser === username) {
+                role = 'Owner';
+                await userDoc.ref.set({ role: 'Owner' }, { merge: true });
+            } else {
+                role = 'User';
+            }
+        }
 
         res.status(200).json({
             isAuthenticated: true,
             user: {
                 username,
-                role: userData.role || 'User'
+                role
             }
         });
     } catch (error) {
