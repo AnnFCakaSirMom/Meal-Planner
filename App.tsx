@@ -477,7 +477,16 @@ export default function App() {
             />
 
             <SelectRecipeModal isOpen={modals.selectRecipe} onClose={() => setModals(p => ({ ...p, selectRecipe: false }))} recipes={appData.recipes} onSelect={(recipeId) => { handleUpdateMealPlan(targetSlot!.day, recipeId); setModals(p => ({ ...p, selectRecipe: false })); }} dayName={targetSlot?.dayName || ''} />
-            <SettingsModal isOpen={modals.settings} onClose={() => setModals(p => ({ ...p, settings: false }))} onSave={handleSaveToFile} onLoad={handleLoadFromFile} onImportRecipes={handleImportRecipesFromFile} />
+            <SettingsModal
+                isOpen={modals.settings}
+                onClose={() => setModals(p => ({ ...p, settings: false }))}
+                onSave={handleSaveToFile}
+                onLoad={handleLoadFromFile}
+                onImportRecipes={handleImportRecipesFromFile}
+                onManageUsers={currentUser && appData.users[currentUser] && appData.users[currentUser].role !== 'User' ? () => {
+                    setModals(p => ({ ...p, settings: false, user: true }));
+                } : undefined}
+            />
             <ConfirmModal isOpen={modals.confirm} onClose={() => setModals(p => ({ ...p, confirm: false }))} onConfirm={() => { if (confirmAction) { confirmAction.action(); setConfirmAction(null); } setModals(p => ({ ...p, confirm: false })); }} title={confirmAction?.title || ""} text={confirmAction?.text || ""} isDanger={confirmAction?.isDanger} confirmText={confirmAction?.confirmText} />
 
             <header className="flex flex-col md:block text-center mb-6 md:mb-10 relative">
