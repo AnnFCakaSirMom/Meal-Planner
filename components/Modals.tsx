@@ -564,26 +564,31 @@ export interface SettingsModalProps {
     onLoad: () => void;
     onImportRecipes: () => void;
     onManageUsers?: () => void;
+    showBackupOptions?: boolean;
 }
-export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, onSave, onLoad, onImportRecipes, onManageUsers }) => {
+export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, onSave, onLoad, onImportRecipes, onManageUsers, showBackupOptions = false }) => {
     return (
         <Modal isOpen={isOpen} onClose={onClose} size="lg">
-            <h3 className="text-2xl font-bold mb-2 text-slate-800">Datahantering & Backup</h3>
-            <p className="text-sm text-slate-500 mb-6">Använd knapparna nedan för att hantera din data.</p>
+            <h3 className="text-2xl font-bold mb-2 text-slate-800">Inställningar</h3>
+            <p className="text-sm text-slate-500 mb-6">Hantera ditt konto och data.</p>
             <div className="space-y-6">
-                <div>
-                    <h4 className="text-md font-semibold text-slate-700 mb-2">Fullständig Backup</h4>
-                    <p className="text-xs text-slate-500 mb-3">Spara eller återställ all programdata, inklusive användare, recept och matplaner. En återställning skriver över all nuvarande data.</p>
-                    <div className="flex items-center space-x-4">
-                        <Button variant="secondary" onClick={onLoad} className="w-full">Återställ från fil...</Button>
-                        <Button variant="primary" onClick={onSave} className="w-full">Spara backup till fil...</Button>
-                    </div>
-                </div>
-                <div>
-                    <h4 className="text-md font-semibold text-slate-700 mb-2">Importera Recept</h4>
-                    <p className="text-xs text-slate-500 mb-3">Lägg till recept från en backup-fil till din nuvarande receptbank. Detta påverkar inte användare eller matplaner och skriver inte över existerande recept.</p>
-                    <Button variant="secondary" onClick={onImportRecipes} className="w-full">Importera recept från fil...</Button>
-                </div>
+                {showBackupOptions && (
+                    <>
+                        <div>
+                            <h4 className="text-md font-semibold text-slate-700 mb-2">Fullständig Backup</h4>
+                            <p className="text-xs text-slate-500 mb-3">Spara eller återställ all programdata, inklusive användare, recept och matplaner. En återställning skriver över all nuvarande data.</p>
+                            <div className="flex items-center space-x-4">
+                                <Button variant="secondary" onClick={onLoad} className="w-full">Återställ från fil...</Button>
+                                <Button variant="primary" onClick={onSave} className="w-full">Spara backup till fil...</Button>
+                            </div>
+                        </div>
+                        <div>
+                            <h4 className="text-md font-semibold text-slate-700 mb-2">Importera Recept</h4>
+                            <p className="text-xs text-slate-500 mb-3">Lägg till recept från en backup-fil till din nuvarande receptbank. Detta påverkar inte användare eller matplaner och skriver inte över existerande recept.</p>
+                            <Button variant="secondary" onClick={onImportRecipes} className="w-full">Importera recept från fil...</Button>
+                        </div>
+                    </>
+                )}
                 {onManageUsers && (
                     <div>
                         <h4 className="text-md font-semibold text-slate-700 mb-2">Administrera Användare</h4>

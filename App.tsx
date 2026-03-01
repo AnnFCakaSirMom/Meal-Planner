@@ -210,6 +210,7 @@ export default function App() {
 
         setCurrentUser(null);
         setAppData(initialAppData); // Rensa data ur minnet
+        await refreshAppData(); // Hämta den anonyma datan (användarlistan) från backend
         setModals(prev => ({ ...prev, user: true }));
     }, [currentUser, appData.adminUser]);
 
@@ -489,6 +490,7 @@ export default function App() {
                 onSave={handleSaveToFile}
                 onLoad={handleLoadFromFile}
                 onImportRecipes={handleImportRecipesFromFile}
+                showBackupOptions={!!(currentUser && appData.users[currentUser] && appData.users[currentUser].role !== 'User')}
                 onManageUsers={currentUser && appData.users[currentUser] && appData.users[currentUser].role !== 'User' ? () => {
                     setModals(p => ({ ...p, settings: false, user: true }));
                 } : undefined}
