@@ -62,13 +62,13 @@ export const RecipeListPanel: React.FC<RecipeListPanelProps> = ({ recipes, curre
                             key={recipe.id}
                             draggable
                             onDragStart={(e) => e.dataTransfer.setData('text/plain', recipe.id)}
-                            className="glass-card p-4 flex justify-between items-center cursor-grab active:cursor-grabbing hover:border-sky-300"
+                            className="glass-card p-4 flex justify-between items-center cursor-grab active:cursor-grabbing hover:border-sky-300 gap-2"
                         >
-                            <div className="pointer-events-none">
-                                <p className="font-semibold text-slate-800">{recipe.name}</p>
-                                <p className="text-xs text-slate-400">Skapad av: {recipe.createdBy || 'Okänd'}</p>
+                            <div className="pointer-events-none flex-1 min-w-0">
+                                <p className="font-semibold text-slate-800 truncate">{recipe.name}</p>
+                                <p className="text-xs text-slate-400 truncate">Skapad av: {recipe.createdBy || 'Okänd'}</p>
                             </div>
-                            <div className="flex space-x-2">
+                            <div className="flex space-x-1 sm:space-x-2 flex-shrink-0">
                                 <button onClick={() => onEdit(recipe)} disabled={!canEdit} title={!canEdit ? 'Du kan bara redigera dina egna recept' : 'Redigera recept'} className={`p-1 ${canEdit ? 'text-slate-500 hover:text-sky-600' : 'text-slate-400 cursor-not-allowed'}`}><EditIcon /></button>
                                 <button onClick={() => onDelete(recipe)} disabled={!canEdit} title={!canEdit ? 'Du kan bara ta bort dina egna recept' : 'Ta bort recept'} className={`p-1 ${canEdit ? 'text-slate-500 hover:text-red-600' : 'text-slate-400 cursor-not-allowed'}`}><DeleteIcon /></button>
                             </div>

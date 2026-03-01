@@ -391,11 +391,11 @@ export default function App() {
                                             const droppedRecipeId = e.dataTransfer.getData('text/plain');
                                             if (droppedRecipeId) handleUpdateMealPlan(dayKey, droppedRecipeId);
                                         }}
-                                        className={`min-h-[140px] md:min-h-[160px] p-4 flex flex-col transition-all duration-200 ${recipe ? 'glass-card justify-between shadow-sm cursor-pointer' : 'bg-white/40 backdrop-blur-sm border-2 border-dashed border-white/60 rounded-2xl justify-center items-center cursor-pointer hover:border-sky-300 hover:bg-white/50'}`}
+                                        className={`min-h-[140px] md:min-h-[150px] p-3 xl:p-2.5 flex flex-col transition-all duration-200 ${recipe ? 'glass-card justify-between shadow-sm cursor-pointer' : 'bg-white/40 backdrop-blur-sm border-2 border-dashed border-white/60 rounded-2xl justify-center items-center cursor-pointer hover:border-sky-300 hover:bg-white/50'}`}
                                     >
                                         {recipe ? (
                                             <>
-                                                <p className="font-bold text-base md:text-sm flex-grow break-words text-slate-800 pointer-events-none leading-tight">{recipe.name}</p>
+                                                <p className="font-bold text-base md:text-sm xl:text-xs flex-grow text-slate-800 pointer-events-none leading-tight overflow-hidden text-ellipsis line-clamp-3 sm:line-clamp-4">{recipe.name}</p>
                                                 <div className="flex gap-2 mt-4 md:mt-1">
                                                     <button onClick={(e) => { e.stopPropagation(); handleViewRecipe(recipe); }} className="flex-1 bg-sky-50/80 hover:bg-sky-100/80 backdrop-blur-sm text-sky-700 py-2.5 md:py-1 rounded-xl text-sm font-bold border border-sky-200 shadow-sm transition-colors">Visa</button>
                                                     <button onClick={(e) => { e.stopPropagation(); handleUpdateMealPlan(dayKey, null); }} className="flex-1 bg-red-50/80 hover:bg-red-100/80 backdrop-blur-sm text-red-600 py-2.5 md:py-1 rounded-xl text-sm font-bold border border-red-200 shadow-sm transition-colors">Radera</button>
