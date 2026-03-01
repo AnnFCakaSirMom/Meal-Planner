@@ -395,7 +395,7 @@ export default function App() {
                                     >
                                         {recipe ? (
                                             <>
-                                                <p className="font-bold text-base md:text-sm xl:text-xs flex-grow text-slate-800 pointer-events-none leading-tight overflow-hidden text-ellipsis line-clamp-3 sm:line-clamp-4">{recipe.name}</p>
+                                                <p title={recipe.name} className="font-bold text-base md:text-sm xl:text-xs flex-grow text-slate-800 pointer-events-none leading-tight overflow-hidden text-ellipsis line-clamp-3 sm:line-clamp-4">{recipe.name}</p>
                                                 <div className="flex gap-2 mt-4 md:mt-1">
                                                     <button onClick={(e) => { e.stopPropagation(); handleViewRecipe(recipe); }} className="flex-1 bg-sky-50/80 hover:bg-sky-100/80 backdrop-blur-sm text-sky-700 py-2.5 md:py-1 rounded-xl text-sm font-bold border border-sky-200 shadow-sm transition-colors">Visa</button>
                                                     <button onClick={(e) => { e.stopPropagation(); handleUpdateMealPlan(dayKey, null); }} className="flex-1 bg-red-50/80 hover:bg-red-100/80 backdrop-blur-sm text-red-600 py-2.5 md:py-1 rounded-xl text-sm font-bold border border-red-200 shadow-sm transition-colors">Radera</button>

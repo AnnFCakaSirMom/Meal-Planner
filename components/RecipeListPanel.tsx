@@ -15,6 +15,7 @@ export interface RecipeListPanelProps {
 
 export const RecipeListPanel: React.FC<RecipeListPanelProps> = ({ recipes, currentUser, adminUser, onAdd, onEdit, onDelete, onFridgeCleanup }) => {
     const [searchTerm, setSearchTerm] = useState('');
+    const [expandedRecipeId, setExpandedRecipeId] = useState<string | null>(null);
 
     const filteredRecipes = useMemo(() => {
         const searchIngredients = searchTerm.toLowerCase().split(',').map(s => s.trim()).filter(Boolean);
@@ -64,8 +65,16 @@ export const RecipeListPanel: React.FC<RecipeListPanelProps> = ({ recipes, curre
                             onDragStart={(e) => e.dataTransfer.setData('text/plain', recipe.id)}
                             className="glass-card p-4 flex justify-between items-center cursor-grab active:cursor-grabbing hover:border-sky-300 gap-2"
                         >
-                            <div className="pointer-events-none flex-1 min-w-0">
-                                <p className="font-semibold text-slate-800 truncate">{recipe.name}</p>
+                            <div
+                                className="flex-1 min-w-0 cursor-pointer"
+                                onClick={() => setExpandedRecipeId(expandedRecipeId === recipe.id ? null : recipe.id)}
+                            >
+                                <p
+                                    className={`font-semibold text-slate-800 transition-all ${expandedRecipeId === recipe.id ? 'whitespace-normal break-words' : 'truncate'}`}
+                                    title={recipe.name}
+                                >
+                                    {recipe.name}
+                                </p>
                                 <p className="text-xs text-slate-400 truncate">Skapad av: {recipe.createdBy || 'Okänd'}</p>
                             </div>
                             <div className="flex space-x-1 sm:space-x-2 flex-shrink-0">
