@@ -322,11 +322,11 @@ export default function App() {
             <header className="flex flex-col md:block text-center mb-6 md:mb-10 relative">
                 <h1 className="text-3xl md:text-6xl font-bold bg-clip-text text-transparent bg-gradient-to-br from-sky-600 to-teal-600 pb-1">Matplanerare</h1>
                 <div className="flex md:absolute md:top-0 md:right-0 items-center justify-center space-x-2 mt-2 md:mt-0">
-                    <div className="flex items-center space-x-1 bg-white/50 px-2 py-1 rounded-full border border-slate-200 shadow-sm">
-                        <span className="font-semibold text-slate-700 text-sm md:text-base">{currentUser}</span>
+                    <div className="flex items-center space-x-1 glass-card px-3 py-1.5 rounded-full">
+                        <span className="font-semibold text-slate-700 text-sm md:text-base drop-shadow-sm">{currentUser}</span>
                         <button onClick={handleSwitchUser} className="p-1.5 text-slate-500 hover:text-sky-600 transition-colors" title="Logga ut"><LogoutIcon /></button>
                     </div>
-                    <button onClick={() => setModals(p => ({ ...p, settings: true }))} className="p-2 bg-white/50 text-slate-500 hover:text-sky-600 border border-slate-200 shadow-sm rounded-full transition-colors" title="Inställningar">
+                    <button onClick={() => setModals(p => ({ ...p, settings: true }))} className="p-2 glass-card text-slate-500 hover:text-sky-600 rounded-full transition-colors flex items-center justify-center" title="Inställningar">
                         <SettingsIcon />
                     </button>
                 </div>
@@ -391,14 +391,14 @@ export default function App() {
                                             const droppedRecipeId = e.dataTransfer.getData('text/plain');
                                             if (droppedRecipeId) handleUpdateMealPlan(dayKey, droppedRecipeId);
                                         }}
-                                        className={`min-h-[140px] md:min-h-[160px] rounded-2xl p-4 flex flex-col border-2 transition-all duration-200 ${recipe ? 'bg-white shadow-sm border-solid border-slate-100 justify-between' : 'bg-slate-50/50 border-dashed border-slate-200 justify-center items-center cursor-pointer hover:border-sky-300'}`}
+                                        className={`min-h-[140px] md:min-h-[160px] p-4 flex flex-col transition-all duration-200 ${recipe ? 'glass-card justify-between shadow-sm cursor-pointer' : 'bg-white/40 backdrop-blur-sm border-2 border-dashed border-white/60 rounded-2xl justify-center items-center cursor-pointer hover:border-sky-300 hover:bg-white/50'}`}
                                     >
                                         {recipe ? (
                                             <>
                                                 <p className="font-bold text-base md:text-sm flex-grow break-words text-slate-800 pointer-events-none leading-tight">{recipe.name}</p>
                                                 <div className="flex gap-2 mt-4 md:mt-1">
-                                                    <button onClick={(e) => { e.stopPropagation(); handleViewRecipe(recipe); }} className="flex-1 bg-sky-50 text-sky-700 py-2.5 md:py-1 rounded-xl text-sm font-bold border border-sky-100">Visa</button>
-                                                    <button onClick={(e) => { e.stopPropagation(); handleUpdateMealPlan(dayKey, null); }} className="flex-1 bg-red-50 text-red-600 py-2.5 md:py-1 rounded-xl text-sm font-bold border border-red-100">Radera</button>
+                                                    <button onClick={(e) => { e.stopPropagation(); handleViewRecipe(recipe); }} className="flex-1 bg-sky-50/80 hover:bg-sky-100/80 backdrop-blur-sm text-sky-700 py-2.5 md:py-1 rounded-xl text-sm font-bold border border-sky-200 shadow-sm transition-colors">Visa</button>
+                                                    <button onClick={(e) => { e.stopPropagation(); handleUpdateMealPlan(dayKey, null); }} className="flex-1 bg-red-50/80 hover:bg-red-100/80 backdrop-blur-sm text-red-600 py-2.5 md:py-1 rounded-xl text-sm font-bold border border-red-200 shadow-sm transition-colors">Radera</button>
                                                 </div>
                                             </>
                                         ) : (
@@ -421,10 +421,10 @@ export default function App() {
             </main>
 
             {/* BOTTENMENY: Visas bara på mobil */}
-            <nav className="fixed bottom-0 left-0 right-0 bg-white/90 backdrop-blur-lg border-t border-slate-200 lg:hidden z-40 px-6 py-3 flex justify-around items-center shadow-[0_-4px_12px_rgba(0,0,0,0.05)]">
+            <nav className="fixed bottom-0 left-0 right-0 bg-white/60 backdrop-blur-xl border-t border-white/50 lg:hidden z-40 px-6 py-3 flex justify-around items-center shadow-[0_-8px_32px_rgba(0,0,0,0.1)]">
                 <button
                     onClick={() => setActiveMobileTab('plan')}
-                    className={`flex flex-col items-center space-y-1 transition-colors ${activeMobileTab === 'plan' ? 'text-sky-600' : 'text-slate-400'}`}
+                    className={`flex flex-col items-center space-y-1 transition-colors ${activeMobileTab === 'plan' ? 'text-sky-600 drop-shadow-sm' : 'text-slate-500'}`}
                 >
                     <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
@@ -433,7 +433,7 @@ export default function App() {
                 </button>
                 <button
                     onClick={() => setActiveMobileTab('recipes')}
-                    className={`flex flex-col items-center space-y-1 transition-colors ${activeMobileTab === 'recipes' ? 'text-sky-600' : 'text-slate-400'}`}
+                    className={`flex flex-col items-center space-y-1 transition-colors ${activeMobileTab === 'recipes' ? 'text-sky-600 drop-shadow-sm' : 'text-slate-500'}`}
                 >
                     <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.584.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />

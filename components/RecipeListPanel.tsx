@@ -52,7 +52,7 @@ export const RecipeListPanel: React.FC<RecipeListPanelProps> = ({ recipes, curre
             </div>
             <div className="mb-4">
                 <label htmlFor="ingredient-search-input" className="sr-only">Sök på ingredienser</label>
-                <input type="search" id="ingredient-search-input" placeholder="Sök ingrediens (t.ex. kyckling)..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-sky-500 focus:border-sky-500 bg-white/80" />
+                <input type="search" id="ingredient-search-input" placeholder="Sök ingrediens (t.ex. kyckling)..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="w-full px-4 py-2.5 border border-white/60 rounded-xl focus:ring-sky-500 focus:border-sky-400 bg-white/40 backdrop-blur-md shadow-inner placeholder-slate-400 text-slate-700 transition-all outline-none" />
             </div>
             <div className="space-y-3 h-[55vh] overflow-y-auto pr-2">
                 {filteredRecipes.length > 0 ? filteredRecipes.map((recipe: Recipe) => {
@@ -62,7 +62,7 @@ export const RecipeListPanel: React.FC<RecipeListPanelProps> = ({ recipes, curre
                             key={recipe.id}
                             draggable
                             onDragStart={(e) => e.dataTransfer.setData('text/plain', recipe.id)}
-                            className="bg-white/60 p-4 rounded-lg shadow-sm flex justify-between items-center border border-slate-200/50 cursor-grab active:cursor-grabbing hover:shadow-md hover:border-sky-300 transition-all"
+                            className="glass-card p-4 flex justify-between items-center cursor-grab active:cursor-grabbing hover:border-sky-300"
                         >
                             <div className="pointer-events-none">
                                 <p className="font-semibold text-slate-800">{recipe.name}</p>
