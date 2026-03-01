@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import type { Recipe, User } from '../types';
 import { Button, Modal } from './UI';
-import { EditIcon, DeleteIcon, KeyIcon, TransferIcon, CopyIcon, SparklesIcon, RandomIcon } from './Icons';
+import { EditIcon, DeleteIcon, KeyIcon, TransferIcon, CopyIcon, SparklesIcon, RandomIcon, ChefHatIcon, XMarkIcon } from './Icons';
 import { generateRecipe } from '../services/geminiService';
 
 export interface ConfirmModalProps {
@@ -340,8 +340,9 @@ export interface ViewRecipeModalProps {
     onClose: () => void;
     recipe: Recipe | null;
     showToast: (message: string, type?: 'success' | 'error') => void;
+    onStartCooking?: (recipe: Recipe) => void;
 }
-export const ViewRecipeModal: React.FC<ViewRecipeModalProps> = ({ isOpen, onClose, recipe, showToast }) => {
+export const ViewRecipeModal: React.FC<ViewRecipeModalProps> = ({ isOpen, onClose, recipe, showToast, onStartCooking }) => {
     const [portions, setPortions] = useState(4);
     const [copyButtonText, setCopyButtonText] = useState('Kopiera');
 
@@ -443,9 +444,16 @@ export const ViewRecipeModal: React.FC<ViewRecipeModalProps> = ({ isOpen, onClos
                 </div>
 
                 {/* Fot (Knappar) */}
-                <div className="p-6 border-t border-slate-200/50 flex-shrink-0 flex justify-end space-x-3 bg-slate-50/50">
-                    <Button variant="secondary" onClick={onClose}>Stäng</Button>
-                    <Button variant="primary" onClick={handleCopy}><CopyIcon /> <span>{copyButtonText}</span></Button>
+                <div className="p-6 border-t border-slate-200/50 flex flex-col space-y-3 bg-slate-50/50">
+                    {onStartCooking && recipe && (
+                        <Button variant="green" onClick={() => onStartCooking(recipe)} className="w-full py-3 text-lg justify-center shadow-md">
+                            <ChefHatIcon /> <span>Starta Matlagningsläge</span>
+                        </Button>
+                    )}
+                    <div className="flex justify-end space-x-3 w-full">
+                        <Button variant="secondary" onClick={onClose} className="flex-1">Stäng</Button>
+                        <Button variant="primary" onClick={handleCopy} className="flex-1 justify-center"><CopyIcon /> <span>{copyButtonText}</span></Button>
+                    </div>
                 </div>
             </div>
         </>
@@ -672,5 +680,117 @@ export const FridgeCleanupModal: React.FC<FridgeCleanupModalProps> = ({ isOpen, 
                 </form>
             )}
         </Modal>
+    );
+};
+
+export interface CookingModeModalProps {
+    isOpen: boolean;
+    onClose: () => void;
+    recipe: Recipe | null;
+}
+
+export const CookingModeModal: React.FC<CookingModeModalProps> = ({ isOpen, onClose, recipe }) => {
+    const [checkedIngredients, setCheckedIngredients] = useState<Set<number>>(new Set());
+    const [checkedSteps, setCheckedSteps] = useState<Set<number>>(new Set());
+
+    useEffect(() => {
+        if (isOpen) {
+            setCheckedIngredients(new Set());
+            setCheckedSteps(new Set());
+        }
+    }, [isOpen, recipe]);
+
+    if (!isOpen || !recipe) return null;
+
+    const toggleIngredient = (index: number) => {
+        const newSet = new Set(checkedIngredients);
+        if (newSet.has(index)) newSet.delete(index);
+        else newSet.add(index);
+        setCheckedIngredients(newSet);
+    };
+
+    const toggleStep = (index: number) => {
+        const newSet = new Set(checkedSteps);
+        if (newSet.has(index)) newSet.delete(index);
+        else newSet.add(index);
+        setCheckedSteps(newSet);
+    };
+
+    const ingredientsList = (recipe.ingredients || '').split('\n').filter(line => line.trim() !== '');
+    const instructionsList = (recipe.instructions || '').split('\n').filter(Boolean);
+
+    return (
+        <div className="fixed inset-0 z-[100] bg-slate-900 text-slate-100 flex flex-col pt-safe-top pb-safe-bottom animate-fade-in-up">
+            {/* Header */}
+            <div className="flex items-center justify-between p-6 md:p-8 bg-slate-800/80 backdrop-blur-md sticky top-0 z-10 border-b border-slate-700 shadow-lg">
+                <div className="flex items-center space-x-4">
+                    <ChefHatIcon />
+                    <h2 className="text-3xl md:text-5xl font-bold truncate pr-4">{recipe.name}</h2>
+                </div>
+                <button
+                    onClick={onClose}
+                    className="p-4 bg-slate-700 hover:bg-slate-600 rounded-full transition-colors flex items-center justify-center shadow-lg"
+                    title="Stäng Matlagningsläge"
+                >
+                    <XMarkIcon />
+                </button>
+            </div>
+
+            {/* Content Container */}
+            <div className="flex-grow overflow-y-auto p-6 md:p-12 space-y-16">
+
+                {/* Ingredients Section */}
+                <section>
+                    <h3 className="text-2xl md:text-3xl font-bold text-sky-400 mb-8 border-b border-slate-700 pb-2">Ingredienser</h3>
+                    <ul className="space-y-4">
+                        {ingredientsList.map((ing, i) => {
+                            const isChecked = checkedIngredients.has(i);
+                            return (
+                                <li
+                                    key={i}
+                                    className={`flex items-start space-x-6 p-4 rounded-2xl cursor-pointer transition-all border ${isChecked ? 'bg-slate-800/50 border-slate-700 text-slate-500 line-through' : 'bg-slate-800 border-slate-600 hover:bg-slate-700 hover:border-slate-500'}`}
+                                    onClick={() => toggleIngredient(i)}
+                                >
+                                    <div className={`mt-1 flex-shrink-0 w-8 h-8 rounded-full border-2 flex items-center justify-center transition-colors ${isChecked ? 'bg-sky-500 border-sky-500 text-white' : 'border-slate-500'}`}>
+                                        {isChecked && <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>}
+                                    </div>
+                                    <span className="text-xl md:text-2xl leading-snug">{ing}</span>
+                                </li>
+                            );
+                        })}
+                    </ul>
+                </section>
+
+                {/* Instructions Section */}
+                <section>
+                    <h3 className="text-2xl md:text-3xl font-bold text-sky-400 mb-8 border-b border-slate-700 pb-2">Gör så här</h3>
+                    <div className="space-y-6">
+                        {instructionsList.map((step, i) => {
+                            const isChecked = checkedSteps.has(i);
+                            return (
+                                <div
+                                    key={i}
+                                    className={`flex items-start space-x-6 p-6 md:p-8 rounded-3xl cursor-pointer transition-all border ${isChecked ? 'bg-slate-800/30 border-slate-800 text-slate-600' : 'bg-slate-800 border-slate-600 shadow-xl hover:bg-slate-700'}`}
+                                    onClick={() => toggleStep(i)}
+                                >
+                                    <div className={`flex-shrink-0 w-12 h-12 md:w-16 md:h-16 rounded-full flex items-center justify-center font-bold text-2xl md:text-3xl transition-colors ${isChecked ? 'bg-slate-700 text-slate-500' : 'bg-sky-500 text-white shadow-lg'}`}>
+                                        {i + 1}
+                                    </div>
+                                    <p className={`text-2xl md:text-4xl leading-relaxed md:leading-normal mt-1 ${isChecked ? 'line-through' : ''}`}>
+                                        {step}
+                                    </p>
+                                </div>
+                            );
+                        })}
+                    </div>
+                </section>
+            </div>
+
+            <div className="p-6 bg-slate-800/90 backdrop-blur-md border-t border-slate-700 flex justify-center">
+                <Button variant="danger" onClick={onClose} className="py-4 px-12 text-xl font-bold rounded-2xl shadow-xl">
+                    Avsluta Matlagning
+                </Button>
+            </div>
+        </div>
     );
 };

@@ -3,7 +3,20 @@ import type { AppData, Recipe } from './types';
 import { hashPassword, getWeekId, getWeekStartDate } from './utils/helpers';
 import { LogoutIcon, SettingsIcon, PrevIcon, NextIcon } from './components/Icons';
 import { Toast, LoadingScreen } from './components/UI';
-import { ConfirmModal, UserModal, RenameUserModal, ResetPasswordModal, TransferRecipesModal, RecipeFormModal, ViewRecipeModal, SelectRecipeModal, SettingsModal, FridgeCleanupModal } from './components/Modals';
+import {
+    ConfirmModal,
+    UserModal,
+    RenameUserModal,
+    ResetPasswordModal,
+    TransferRecipesModal,
+    RecipeFormModal,
+    ViewRecipeModal,
+    SelectRecipeModal,
+    SettingsModal,
+    FridgeCleanupModal,
+    CookingModeModal
+} from './components/Modals';
+import { useWakeLock } from './utils/useWakeLock';
 import { RecipeListPanel } from './components/RecipeListPanel';
 
 const initialAppData: AppData = { users: {}, recipes: {}, mealPlans: {}, adminUser: null };
@@ -20,12 +33,23 @@ export default function App() {
     const [showToast, setShowToast] = useState(false);
 
     const [modals, setModals] = useState({
-        user: true, recipeForm: false, viewRecipe: false, selectRecipe: false,
-        settings: false, confirm: false, renameUser: false, transferRecipes: false, resetPassword: false, fridgeCleanup: false
+        user: true,
+        addRecipe: false,
+        viewRecipe: false,
+        selectRecipe: false,
+        settings: false,
+        confirm: false,
+        renameUser: false,
+        resetPassword: false,
+        transferRecipes: false,
+        fridgeCleanup: false,
+        cookingMode: false
     });
+    const [editingRecipe, setEditingRecipe] = useState<Recipe | null>(null);
+    const [viewingRecipe, setViewingRecipe] = useState<Recipe | null>(null);
+    const [activeCookingRecipe, setActiveCookingRecipe] = useState<Recipe | null>(null);
 
-    const [recipeToEdit, setRecipeToEdit] = useState<Recipe | null>(null);
-    const [recipeToView, setRecipeToView] = useState<Recipe | null>(null);
+    const { requestWakeLock, releaseWakeLock } = useWakeLock();
     const [targetSlot, setTargetSlot] = useState<{ day: string, dayName: string } | null>(null);
     const [confirmAction, setConfirmAction] = useState<{ action: () => void, title: string, text: string, confirmText?: string, isDanger?: boolean } | null>(null);
     const [userToRename, setUserToRename] = useState<string | null>(null);
@@ -212,10 +236,25 @@ export default function App() {
         displayToast('Recept sparat!', 'success');
     }, [currentUser, displayToast, syncToDB]);
 
-    const handleAddRecipe = useCallback(() => { setRecipeToEdit(null); setModals(p => ({ ...p, recipeForm: true })); }, []);
-    const handleEditRecipe = useCallback((recipe: Recipe) => { setRecipeToEdit(recipe); setModals(p => ({ ...p, recipeForm: true })); }, []);
-    const handleViewRecipe = useCallback((recipe: Recipe) => { setRecipeToView(recipe); setModals(p => ({ ...p, viewRecipe: true })); }, []);
-    const handleCloseViewRecipe = useCallback(() => { setModals(p => ({ ...p, viewRecipe: false })); setRecipeToView(null); }, []);
+    const handleAddRecipe = useCallback(() => { setEditingRecipe(null); setModals(p => ({ ...p, addRecipe: true })); }, []);
+    const handleEditRecipe = useCallback((recipe: Recipe) => { setEditingRecipe(recipe); setModals(p => ({ ...p, addRecipe: true })); }, []);
+    const handleStartCooking = (recipe: Recipe) => {
+        setModals(p => ({ ...p, viewRecipe: false, cookingMode: true }));
+        setActiveCookingRecipe(recipe);
+        requestWakeLock();
+    };
+
+    const handleStopCooking = () => {
+        setModals(p => ({ ...p, cookingMode: false }));
+        setActiveCookingRecipe(null);
+        releaseWakeLock();
+    };
+
+    const handleViewRecipe = (recipe: Recipe) => {
+        setViewingRecipe(recipe);
+        setModals(p => ({ ...p, viewRecipe: true }));
+    };
+    const handleCloseViewRecipe = useCallback(() => { setModals(p => ({ ...p, viewRecipe: false })); setViewingRecipe(null); }, []);
 
     const handleDeleteRecipe = useCallback((recipe: Recipe) => {
         setConfirmAction({
@@ -312,9 +351,22 @@ export default function App() {
     return (
         <div className="container mx-auto p-3 md:p-8 max-w-7xl pb-24 lg:pb-8">
             {toastInfo && <Toast message={toastInfo.message} type={toastInfo.type} show={showToast} />}
-            <RecipeFormModal isOpen={modals.recipeForm} onClose={() => setModals(p => ({ ...p, recipeForm: false }))} onSave={handleSaveRecipe} recipeToEdit={recipeToEdit} showToast={displayToast} />
+            <RecipeFormModal isOpen={modals.addRecipe} onClose={() => setModals(p => ({ ...p, addRecipe: false }))} onSave={handleSaveRecipe} recipeToEdit={editingRecipe} showToast={displayToast} />
             <FridgeCleanupModal isOpen={modals.fridgeCleanup} onClose={() => setModals(p => ({ ...p, fridgeCleanup: false }))} onSave={(data) => handleSaveRecipe(data, undefined)} showToast={displayToast} />
-            <ViewRecipeModal isOpen={modals.viewRecipe} onClose={handleCloseViewRecipe} recipe={recipeToView} showToast={displayToast} />
+            <ViewRecipeModal
+                isOpen={modals.viewRecipe}
+                onClose={handleCloseViewRecipe}
+                recipe={viewingRecipe}
+                showToast={displayToast}
+                onStartCooking={handleStartCooking}
+            />
+
+            <CookingModeModal
+                isOpen={modals.cookingMode}
+                onClose={handleStopCooking}
+                recipe={activeCookingRecipe}
+            />
+
             <SelectRecipeModal isOpen={modals.selectRecipe} onClose={() => setModals(p => ({ ...p, selectRecipe: false }))} recipes={appData.recipes} onSelect={(recipeId) => { handleUpdateMealPlan(targetSlot!.day, recipeId); setModals(p => ({ ...p, selectRecipe: false })); }} dayName={targetSlot?.dayName || ''} />
             <SettingsModal isOpen={modals.settings} onClose={() => setModals(p => ({ ...p, settings: false }))} onSave={handleSaveToFile} onLoad={handleLoadFromFile} onImportRecipes={handleImportRecipesFromFile} />
             <ConfirmModal isOpen={modals.confirm} onClose={() => setModals(p => ({ ...p, confirm: false }))} onConfirm={() => { if (confirmAction) { confirmAction.action(); setConfirmAction(null); } setModals(p => ({ ...p, confirm: false })); }} title={confirmAction?.title || ""} text={confirmAction?.text || ""} isDanger={confirmAction?.isDanger} confirmText={confirmAction?.confirmText} />
