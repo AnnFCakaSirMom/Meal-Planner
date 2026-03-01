@@ -29,21 +29,21 @@ export const RecipeListPanel: React.FC<RecipeListPanelProps> = ({ recipes, curre
 
     return (
         <div className="panel p-6 lg:col-span-1">
-            <div className="flex justify-between items-center mb-6">
-                <h2 className="text-xl md:text-2xl font-bold text-slate-800 truncate mr-2">Receptbank</h2>
-                <div className="flex items-center space-x-2 flex-shrink-0">
+            <div className="mb-4">
+                <h2 className="text-2xl font-bold text-slate-800 mb-3">Receptbank</h2>
+                <div className="flex items-center space-x-2">
                     <Button
                         variant="green"
                         onClick={onFridgeCleanup}
-                        className="px-2 py-1.5 md:px-3 md:py-2 text-xs md:text-sm whitespace-nowrap flex items-center shadow-sm"
+                        className="px-3 py-2 text-sm whitespace-nowrap flex items-center shadow-sm"
                         title="Kylskåpsrensning - Skapa recept från rester"
                     >
                         <SparklesIcon />
-                        <span className="hidden sm:inline ml-1">Kylskåpsrensning</span>
+                        <span className="ml-1">Kylskåpsrensning</span>
                     </Button>
                     <Button
                         onClick={onAdd}
-                        className="p-1.5 md:p-2 rounded-full shadow-sm flex items-center justify-center"
+                        className="p-2 rounded-full shadow-sm flex items-center justify-center flex-shrink-0"
                         title="Lägg till nytt recept"
                     >
                         <PlusIcon />
