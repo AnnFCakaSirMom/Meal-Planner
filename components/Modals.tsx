@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import type { Recipe, User } from '../types';
 import { Button, Modal } from './UI';
-import { EditIcon, DeleteIcon, KeyIcon, TransferIcon, CopyIcon, SparklesIcon, RandomIcon, ChefHatIcon, XMarkIcon, ShoppingCartIcon } from './Icons';
+import { EditIcon, DeleteIcon, KeyIcon, TransferIcon, CopyIcon, SparklesIcon, RandomIcon, ChefHatIcon, XMarkIcon } from './Icons';
 import { generateRecipe } from '../services/geminiService';
 
 export interface ConfirmModalProps {
@@ -133,7 +133,7 @@ export const UserModal: React.FC<UserModalProps> = ({ isOpen, users, currentUser
                             const userRole = users[user]?.role || 'User';
                             const isOwner = userRole === 'Owner';
                             const isAdmin = userRole === 'Admin';
-                            const isMe = user === selectedUser; // Actually we don't have the current user's name easily here except it's not strictly 'selectedUser'. We might need to block based on roles.
+                            // Actually we don't have the current user's name easily here except it's not strictly 'selectedUser'. We might need to block based on roles.
 
                             // Owner can do everything. Admin can't touch Owner.
                             const canEdit = currentUserRole === 'Owner' || !isOwner;
